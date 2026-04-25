@@ -397,6 +397,8 @@
       const [successCount, setSuccessCount] = useState(0);
       const [expandedRow, setExpandedRow] = useState(null);
       const [showResults, setShowResults] = useState(false);
+      const [pasteMode, setPasteMode] = useState(false);
+      const [gazetteText, setGazetteText] = useState("");
       const abortRef = useRef(false);
 
       // ── Cascading Dropdown Loaders ──
@@ -574,9 +576,50 @@
         const r = (result || "").toUpperCase();
         if (r.includes("REGISTERED") || r.includes("PASS")) return "#22c55e";
         if (r.includes("FAIL") || r.includes("ATKT")) return "#ef4444";
-        if (r.includes("NOT IN LIST") || r.includes("NOT FOUND")) return "#475569";
+        if (r.includes("NOT IN LIST") || r.includes("NOT FOUND") || r.includes("ABSENT") || r.includes("UNKNOWN")) return "#475569";
         if (r.includes("ERROR")) return "#f59e0b";
         return "#8b5cf6";
+      };
+
+      const applyGazetteData = () => {
+        if (!gazetteText.trim()) { setError("Please paste the Gazette text first."); return; }
+        const lines = gazetteText.split('\n');
+        const statuses = new Map();
+        let currentGroup = "UNKNOWN";
+
+        for (let line of lines) {
+          const l = line.toUpperCase().trim();
+          if (l.includes("PASS BY GRACE")) currentGroup = "PASS BY GRACE";
+          else if (l.includes("PASSED") || (l.includes("PASS") && !l.includes("GRACE"))) currentGroup = "PASS";
+          else if (l.includes("FAIL")) currentGroup = "FAIL";
+          else if (l.includes("ABSENT")) currentGroup = "ABSENT";
+          else if (l.includes("W/D")) currentGroup = "W/D";
+          
+          const rollLength = String(results[0]?.rollNo || "").length || 6;
+          const regex = new RegExp("\\b\\d{" + rollLength + "}\\b", "g");
+          const matches = line.match(regex);
+          if (matches) {
+            for (let m of matches) statuses.set(m, currentGroup);
+          }
+        }
+        
+        let updated = 0;
+        setResults(prev => prev.map(r => {
+          if (statuses.has(r.rollNo)) {
+             updated++;
+             return { ...r, result: statuses.get(r.rollNo) };
+          }
+          return r;
+        }));
+
+        if (updated > 0) {
+          setError("");
+          setPasteMode(false);
+          setGazetteText("");
+          alert(`✅ Successfully synced ${updated} results from the Gazette data!`);
+        } else {
+          setError("❌ Could not find matching roll numbers in the pasted text. Make sure you copied the Gazette text completely.");
+        }
       };
 
       const totalCount = parseInt(rollEnd) - parseInt(rollStart) + 1;
@@ -791,7 +834,7 @@
               )}
 
               {/* Action Buttons */}
-              <div style={{ display: "flex", gap: "0.75rem", marginTop: "1.5rem", flexWrap: "wrap" }}>
+              <div style={{ display: "flex", gap: "0.75rem", marginTop: "1.5rem", flexWrap: "wrap", alignItems: "center" }}>
                 <button id="btn-fetch" onClick={handleFetch} disabled={loading}
                   className="btn-ripple"
                   style={{
@@ -846,7 +889,82 @@
                   onMouseLeave={e => e.currentTarget.style.background = "rgba(34,197,94,0.08)"}
                   >📥 Export CSV</button>
                 )}
+
+                {results.length > 0 && !loading && (
+                  <div style={{ display: "flex", gap: "0.5rem" }}>
+                    <a href={`${BASE}/GetGazetteReport_Report?faculty=${faculty}&degree=${degree}&courseCode=${course}&department=${department}`}
+                      target="_blank" rel="noopener noreferrer"
+                      style={{
+                        padding: "0.85rem 1.5rem",
+                        background: "rgba(56,189,248,0.1)",
+                        border: "1px solid rgba(56,189,248,0.25)",
+                        borderRadius: "14px", color: "#38bdf8",
+                        fontSize: "0.85rem", fontWeight: "600", textDecoration: "none",
+                        fontFamily: "'Inter', sans-serif", transition: "all 0.2s",
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.background = "rgba(56,189,248,0.2)"}
+                      onMouseLeave={e => e.currentTarget.style.background = "rgba(56,189,248,0.1)"}
+                    >📰 View Gazette</a>
+                    
+                    <button onClick={() => setPasteMode(!pasteMode)} style={{
+                      padding: "0.85rem 1.5rem",
+                      background: pasteMode ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.05)",
+                      border: "1px solid rgba(255,255,255,0.1)",
+                      borderRadius: "14px", color: "#fff",
+                      fontSize: "0.85rem", fontWeight: "600",
+                      cursor: "pointer", fontFamily: "'Inter', sans-serif",
+                      transition: "all 0.2s", display: "flex", alignItems: "center", gap: "0.4rem",
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.15)"}
+                    onMouseLeave={e => e.currentTarget.style.background = pasteMode ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.05)"}
+                    >✨ Auto-Grade via Gazette</button>
+                  </div>
+                )}
               </div>
+
+              {/* Gazette Paste Form */}
+              {pasteMode && results.length > 0 && !loading && (
+                <div style={{
+                  marginTop: "1.5rem", padding: "1.5rem",
+                  background: "rgba(15,23,42,0.6)",
+                  border: "1px solid rgba(56,189,248,0.3)",
+                  borderRadius: "16px",
+                  animation: "fadeInUp 0.3s ease-out",
+                }}>
+                  <h3 style={{ margin: "0 0 0.5rem", fontSize: "0.95rem", color: "#38bdf8", display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                    <span>✨</span> Auto-Assign Pass/Fail
+                  </h3>
+                  <p style={{ color: "#94a3b8", fontSize: "0.75rem", marginBottom: "1rem", lineHeight: 1.5 }}>
+                    1. Click <b>View Gazette</b> to open the official summary.<br/>
+                    2. Press <code>Ctrl+A</code> and <code>Ctrl+C</code> anywhere on that page.<br/>
+                    3. Paste the text below and click <b>Sync Marks</b>. Our tool will instantly match Pass/Fail to every student locally in 5 milliseconds.
+                  </p>
+                  <textarea
+                    value={gazetteText}
+                    onChange={e => setGazetteText(e.target.value)}
+                    placeholder="Paste the Gazette text here..."
+                    style={{
+                      width: "100%", height: "120px", padding: "1rem",
+                      background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.1)",
+                      borderRadius: "12px", color: "#e2e8f0", fontSize: "0.75rem",
+                      fontFamily: "'JetBrains Mono', monospace", outline: "none", resize: "vertical",
+                      marginBottom: "1rem", transition: "border-color 0.2s"
+                    }}
+                    onFocus={e => e.currentTarget.style.borderColor = "#38bdf8"}
+                    onBlur={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)"}
+                  />
+                  <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem" }}>
+                    <button onClick={() => setPasteMode(false)} style={{
+                      padding: "0.6rem 1.2rem", background: "transparent", border: "1px solid rgba(255,255,255,0.1)",
+                      borderRadius: "10px", color: "#94a3b8", cursor: "pointer", fontSize: "0.8rem", fontWeight: "600",
+                    }}>Cancel</button>
+                    <button onClick={applyGazetteData} style={{
+                      padding: "0.6rem 1.2rem", background: "#38bdf8", border: "none",
+                      borderRadius: "10px", color: "#0f172a", cursor: "pointer", fontSize: "0.8rem", fontWeight: "700",
+                    }}>🚀 Sync Marks</button>
+                  </div>
+                </div>
+              )}
 
               {/* Progress Bar */}
               {loading && (
@@ -914,8 +1032,8 @@
                     Registered Students — {registeredCount} records
                   </h2>
                   <div style={{ display: "flex", gap: "1rem", fontSize: "0.7rem", fontFamily: "'JetBrains Mono', monospace" }}>
-                    {[{ s: "REGISTERED", l: "Found" }].map(({ s, l }) => {
-                      const count = results.length;
+                    {[{ s: "PASS", l: "Passed" }, { s: "FAIL", l: "Failed" }, { s: "PASS BY GRACE", l: "Pass Grace" }, { s: "REGISTERED", l: "Pending Link" }].map(({ s, l }) => {
+                      const count = results.filter(r => r.result === s).length;
                       return count > 0 ? (
                         <span key={s} style={{ color: statusColor(s), display: "flex", alignItems: "center", gap: "0.35rem" }}>
                           <span style={{
