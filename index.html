@@ -483,33 +483,42 @@
         abortRef.current = false;
 
         const s = parseInt(rollStart), e = parseInt(rollEnd);
+        const registeredSet = new Set(rollNumbers.map(r => String(r)));
+
+        // Only include registered roll numbers within the range
         let rollList = [];
         for (let i = s; i <= e; i++) {
-          rollList.push(String(i).padStart(rollStart.length, "0"));
+          const roll = String(i).padStart(rollStart.length, "0");
+          if (registeredSet.has(roll)) {
+            rollList.push(roll);
+          }
         }
 
-        const registeredSet = new Set(rollNumbers.map(r => String(r)));
         const total = rollList.length;
+
+        if (total === 0) {
+          setError("No registered students found in this roll number range.");
+          setLoading(false);
+          return;
+        }
+
         const allResults = [];
-        let successes = 0;
 
         for (let i = 0; i < rollList.length; i++) {
           if (abortRef.current) break;
           const roll = rollList[i];
-          const isRegistered = registeredSet.has(roll);
-          if (isRegistered) successes++;
 
           allResults.push({
             rollNo: roll,
-            studentName: isRegistered ? "✓ Registered" : "—",
-            result: isRegistered ? "REGISTERED" : "NOT IN LIST",
-            isRegistered,
+            studentName: "✓ Registered",
+            result: "REGISTERED",
+            isRegistered: true,
           });
 
           if (i % 10 === 0 || i === rollList.length - 1) {
             setResults([...allResults]);
             setProgress(Math.round(((i + 1) / total) * 100));
-            setSuccessCount(successes);
+            setSuccessCount(allResults.length);
             setCurrentRoll(roll);
             await new Promise(r => setTimeout(r, 0));
           }
@@ -517,7 +526,7 @@
 
         setResults(allResults);
         setProgress(100);
-        setSuccessCount(successes);
+        setSuccessCount(allResults.length);
         setLoading(false);
         setCurrentRoll("");
         setTimeout(() => setShowResults(true), 100);
@@ -580,9 +589,8 @@
         return "#8b5cf6";
       };
 
-      const totalCount = results.length;
-      const registeredCount = results.filter(r => r.isRegistered).length;
-      const notFoundCount = totalCount - registeredCount;
+      const totalCount = parseInt(rollEnd) - parseInt(rollStart) + 1;
+      const registeredCount = results.length;
 
       // ── Form Completion Indicator ──
       const formSteps = [department, session, faculty, degree, course].filter(Boolean).length;
@@ -872,14 +880,13 @@
             {results.length > 0 && !loading && (
               <div style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(3, 1fr)",
+                gridTemplateColumns: "repeat(2, 1fr)",
                 gap: "1rem",
-                maxWidth: "820px",
+                maxWidth: "600px",
                 margin: "0 auto 2rem",
               }}>
-                <StatCard icon="📊" label="Total Checked" value={totalCount} color="#a5b4fc" delay={0} />
-                <StatCard icon="✅" label="Registered" value={registeredCount} color="#22c55e" delay={0.1} />
-                <StatCard icon="❌" label="Not Found" value={notFoundCount} color="#64748b" delay={0.2} />
+                <StatCard icon="📊" label="Total Checked" value={totalCount || 0} color="#a5b4fc" delay={0} />
+                <StatCard icon="✅" label="Found in List" value={registeredCount || 0} color="#22c55e" delay={0.1} />
               </div>
             )}
 
@@ -898,11 +905,11 @@
                     background: "linear-gradient(90deg, #a5b4fc, #c084fc)",
                     WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
                   }}>
-                    Results — {totalCount} records
+                    Registered Students — {registeredCount} records
                   </h2>
                   <div style={{ display: "flex", gap: "1rem", fontSize: "0.7rem", fontFamily: "'JetBrains Mono', monospace" }}>
-                    {[{ s: "REGISTERED", l: "Found" }, { s: "NOT IN LIST", l: "Missing" }].map(({ s, l }) => {
-                      const count = results.filter(r => r.result === s).length;
+                    {[{ s: "REGISTERED", l: "Found" }].map(({ s, l }) => {
+                      const count = results.length;
                       return count > 0 ? (
                         <span key={s} style={{ color: statusColor(s), display: "flex", alignItems: "center", gap: "0.35rem" }}>
                           <span style={{
