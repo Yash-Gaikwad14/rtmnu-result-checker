@@ -534,36 +534,20 @@
 
       const fetchMarksheetPdf = async (rollNo) => {
         setError("");
-        try {
-          const res = await fetchRaw("/GetMarkSheet_report", {
-            rollno: rollNo, session, courseCode: course,
-            faculty, degree, department,
-          });
-          const buffer = await res.arrayBuffer();
-          const bytes = new Uint8Array(buffer);
-          const header = String.fromCharCode(...bytes.slice(0, 5));
+        // Since CORS proxies strip the session cookie, fetching the PDF directly in JS fails with "requires browser session"
+        // Instead, we construct the direct URL to the RTMNU API. When we put this URL in an <iframe>,
+        // the browser will automatically send the user's cookies to the RTMNU server, allowing the PDF to generate.
+        const qs = new URLSearchParams({
+          rollno: rollNo, session, courseCode: course,
+          faculty, degree, department,
+        }).toString();
+        const pdfUrl = `${BASE}/GetMarkSheet_report?${qs}`;
 
-          if (header.startsWith("%PDF") && bytes.length > 500) {
-            const blob = new Blob([buffer], { type: "application/pdf" });
-            const pdfUrl = URL.createObjectURL(blob);
-            setResults(prev => prev.map(r =>
-              r.rollNo === rollNo ? { ...r, pdfUrl, remarks: "PDF loaded ✓" } : r
-            ));
-            setExpandedRow(rollNo);
-            return;
-          }
-
-          const text = new TextDecoder().decode(bytes);
-          if (text.includes("System.IO.IOException")) {
-            setError(`⚡ Server busy generating PDF for ${rollNo}. Try again in a few seconds.`);
-          } else if (text.includes("<!DOCTYPE html") && text.length > 5000) {
-            setError(`🔒 RTMNU server requires a browser session for PDFs. Use "Open Portal" instead.`);
-          } else {
-            setError(`Could not load PDF for ${rollNo}. Use "Open Portal" button.`);
-          }
-        } catch (e) {
-          setError(`Network error: ${e.message}`);
-        }
+        // Just open the modal immediately with the direct URL
+        setResults(prev => prev.map(r =>
+          r.rollNo === rollNo ? { ...r, pdfUrl, remarks: "Viewing in Modal" } : r
+        ));
+        setExpandedRow(rollNo);
       };
 
       const handleStop = () => { abortRef.current = true; };
