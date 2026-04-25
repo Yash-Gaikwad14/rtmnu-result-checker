@@ -1041,45 +1041,63 @@
                   </div>
                 </div>
 
-                {/* Expanded PDF Viewer */}
+                {/* Expanded PDF Viewer Modal */}
                 {expandedRow && (() => {
                   const r = results.find(x => x.rollNo === expandedRow);
                   if (!r?.pdfUrl) return null;
                   return (
                     <div style={{
-                      marginTop: "1rem",
-                      background: "rgba(255,255,255,0.02)",
-                      border: "1px solid rgba(99,102,241,0.2)",
-                      borderRadius: "20px",
-                      overflow: "hidden",
-                      animation: "fadeInScale 0.3s ease-out",
-                      boxShadow: "0 4px 30px rgba(0,0,0,0.2)",
+                      position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+                      background: "rgba(6, 8, 15, 0.8)",
+                      backdropFilter: "blur(8px)",
+                      zIndex: 1000,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      animation: "fadeInScale 0.2s ease-out",
+                      padding: "2rem"
                     }}>
                       <div style={{
-                        display: "flex", justifyContent: "space-between", alignItems: "center",
-                        padding: "0.8rem 1.2rem",
-                        background: "linear-gradient(135deg, rgba(99,102,241,0.08), rgba(139,92,246,0.05))",
-                        borderBottom: "1px solid rgba(99,102,241,0.1)",
+                        width: "100%", maxWidth: "1000px", height: "100%",
+                        background: "rgba(15, 23, 42, 0.95)",
+                        border: "1px solid rgba(99,102,241,0.3)",
+                        borderRadius: "20px",
+                        overflow: "hidden",
+                        display: "flex", flexDirection: "column",
+                        boxShadow: "0 20px 60px rgba(0,0,0,0.5)",
                       }}>
-                        <span style={{ color: "#a5b4fc", fontWeight: "700", fontSize: "0.85rem" }}>
-                          📋 Marksheet — {r.rollNo}
-                        </span>
-                        <div style={{ display: "flex", gap: "0.5rem" }}>
-                          <a href={r.pdfUrl} download={`Marksheet_${r.rollNo}.pdf`} style={{
-                            background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.25)",
-                            borderRadius: "8px", color: "#86efac", padding: "0.35rem 0.8rem",
-                            fontSize: "0.72rem", textDecoration: "none", fontWeight: 600,
-                          }}>📥 Download</a>
-                          <button onClick={() => setExpandedRow(null)} style={{
-                            background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.25)",
-                            borderRadius: "8px", color: "#fca5a5", padding: "0.35rem 0.8rem",
-                            cursor: "pointer", fontSize: "0.72rem", fontWeight: 600,
-                          }}>✕</button>
+                        <div style={{
+                          display: "flex", justifyContent: "space-between", alignItems: "center",
+                          padding: "1rem 1.5rem",
+                          background: "linear-gradient(135deg, rgba(99,102,241,0.1), rgba(139,92,246,0.1))",
+                          borderBottom: "1px solid rgba(99,102,241,0.15)",
+                        }}>
+                          <span style={{ color: "#a5b4fc", fontWeight: "700", fontSize: "1rem" }}>
+                            📋 Marksheet — {r.rollNo}
+                          </span>
+                          <div style={{ display: "flex", gap: "0.75rem" }}>
+                            <a href={r.pdfUrl} download={`Marksheet_${r.rollNo}.pdf`} style={{
+                              background: "rgba(34,197,94,0.15)", border: "1px solid rgba(34,197,94,0.3)",
+                              borderRadius: "10px", color: "#86efac", padding: "0.5rem 1rem",
+                              fontSize: "0.8rem", textDecoration: "none", fontWeight: 600,
+                              transition: "all 0.2s",
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.background = "rgba(34,197,94,0.25)"}
+                            onMouseLeave={e => e.currentTarget.style.background = "rgba(34,197,94,0.15)"}
+                            >📥 Download PDF</a>
+                            <button onClick={() => setExpandedRow(null)} style={{
+                              background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)",
+                              borderRadius: "10px", color: "#fca5a5", padding: "0.5rem 1rem",
+                              cursor: "pointer", fontSize: "0.8rem", fontWeight: 600,
+                              transition: "all 0.2s",
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.background = "rgba(239,68,68,0.25)"}
+                            onMouseLeave={e => e.currentTarget.style.background = "rgba(239,68,68,0.15)"}
+                            >✕ Close Viewer</button>
+                          </div>
                         </div>
+                        <iframe src={r.pdfUrl}
+                          style={{ width: "100%", flexGrow: 1, border: "none", background: "#fff" }}
+                          title={`Marksheet ${r.rollNo}`} />
                       </div>
-                      <iframe src={r.pdfUrl}
-                        style={{ width: "100%", height: "70vh", border: "none", background: "#fff" }}
-                        title={`Marksheet ${r.rollNo}`} />
                     </div>
                   );
                 })()}
