@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RTMNU Bulk Result Checker</title>
+  <meta name="description" content="Bulk result checker for Rashtrasant Tukadoji Maharaj Nagpur University (RTMNU)" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0a0e1a;
+      font-family: 'Inter', sans-serif;
+      overflow-x: hidden;
+    }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: rgba(255,255,255,0.03); }
+    ::-webkit-scrollbar-thumb { background: rgba(99,102,241,0.4); border-radius: 99px; }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .fade-in { animation: fadeIn 0.4s ease-out forwards; }
+    .pulse-anim { animation: pulse 1.5s ease-in-out infinite; }
+
+    select option {
+      background: #1a1f35;
+      color: #e2e8f0;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef, useCallback } = React;
+
+    const BASE = "https://rtmnuresults.uonex.in";
+    // Multiple CORS proxies as fallbacks
+    const CORS_PROXIES = [
+      "https://api.allorigins.win/raw?url=",
+      "https://corsproxy.io/?",
+      "https://api.codetabs.com/v1/proxy?quest=",
+    ];
+
+    let currentProxyIndex = 0;
+
+    const proxyFetch = async (url, options = {}) => {
+      // Try each proxy in order
+      for (let i = 0; i < CORS_PROXIES.length; i++) {
+        const proxyIdx = (currentProxyIndex + i) % CORS_PROXIES.length;
+        const proxy = CORS_PROXIES[proxyIdx];
+        try {
+          const res = await fetch(proxy + encodeURIComponent(url), {
+            ...options,
+            signal: AbortSignal.timeout(15000),
+          });
+          if (res.ok) {
+            currentProxyIndex = proxyIdx;
+            return res;
+          }
+        } catch (e) {
+          continue;
+        }
+      }
+      throw new Error("All CORS proxies failed. Try again later.");
+    };
+
+    const fetchJSON = async (path, params = {}) => {
+      const qs = new URLSearchParams(params).toString();
+      const url = `${BASE}${path}${qs ? '?' + qs : ''}`;
+      const res = await proxyFetch(url);
+      return res.json();
+    };
+
+    // Fetch raw response (for PDF or HTML detection)
+    const fetchRaw = async (path, params = {}) => {
+      const qs = new URLSearchParams(params).toString();
+      const url = `${BASE}${path}${qs ? '?' + qs : ''}`;
+      const res = await proxyFetch(url);
+      return res;
+    };
+
+    // ── Reusable Components ──
+    const Spinner = () => (
+      <div style={{
+        width: 16, height: 16,
+        border: "2px solid rgba(255,255,255,0.15)",
+        borderTopColor: "#a5b4fc",
+        borderRadius: "50%",
+        animation: "spin 0.6s linear infinite",
+        display: "inline-block",
+      }} />
+    );
+
+    const SelectField = ({ label, value, onChange, options, loading, disabled, id }) => (
+      <div>
+        <label style={labelStyle}>{label}</label>
+        <div style={{ position: "relative" }}>
+          <select
+            id={id}
+            value={value}
+            onChange={onChange}
+            disabled={disabled || loading}
+            style={{
+              ...inputStyle,
+              cursor: disabled ? "not-allowed" : "pointer",
+              opacity: disabled ? 0.5 : 1,
+              appearance: "none",
+              paddingRight: "2.5rem",
+            }}
+          >
+            <option value="">
+              {loading ? "Loading..." : `Select ${label.replace(" *", "")}`}
+            </option>
+            {options.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+          <div style={{
+            position: "absolute", right: "0.75rem", top: "50%", transform: "translateY(-50%)",
+            pointerEvents: "none", color: "#64748b",
+          }}>
+            {loading ? <Spinner /> : "▾"}
+          </div>
+        </div>
+      </div>
+    );
+
+    // ── Main App ──
+    function RTMNUChecker() {
+      const [department, setDepartment] = useState("");
+      const [session, setSession] = useState("");
+      const [faculty, setFaculty] = useState("");
+      const [degree, setDegree] = useState("");
+      const [course, setCourse] = useState("");
+      const [rollStart, setRollStart] = useState("");
+      const [rollEnd, setRollEnd] = useState("");
+
+      const [sessions, setSessions] = useState([]);
+      const [faculties, setFaculties] = useState([]);
+      const [degrees, setDegrees] = useState([]);
+      const [courses, setCourses] = useState([]);
+      const [rollNumbers, setRollNumbers] = useState([]);
+
+      const [loadingSessions, setLoadingSessions] = useState(false);
+      const [loadingFaculties, setLoadingFaculties] = useState(false);
+      const [loadingDegrees, setLoadingDegrees] = useState(false);
+      const [loadingCourses, setLoadingCourses] = useState(false);
+      const [loadingRolls, setLoadingRolls] = useState(false);
+
+      const [results, setResults] = useState([]);
+      const [loading, setLoading] = useState(false);
+      const [progress, setProgress] = useState(0);
+      const [currentRoll, setCurrentRoll] = useState("");
+      const [error, setError] = useState("");
+      const [successCount, setSuccessCount] = useState(0);
+      const abortRef = useRef(false);
+
+      // ── Cascading Dropdown Loaders ──
+
+      // Department → Sessions
+      useEffect(() => {
+        if (!department) { setSessions([]); return; }
+        setLoadingSessions(true);
+        setSession(""); setFaculty(""); setDegree(""); setCourse("");
+        setFaculties([]); setDegrees([]); setCourses([]); setRollNumbers([]);
+        fetchJSON("/Auth/GetDegreesBySession", { department })
+          .then(data => {
+            setSessions(data.map(d => ({
+              value: d.sessionYear || d.SessionYear,
+              label: d.sessionYear || d.SessionYear
+            })));
+          })
+          .catch(() => setError("Failed to load sessions"))
+          .finally(() => setLoadingSessions(false));
+      }, [department]);
+
+      // Session → Faculties
+      useEffect(() => {
+        if (!session || !department) { setFaculties([]); return; }
+        setLoadingFaculties(true);
+        setFaculty(""); setDegree(""); setCourse("");
+        setDegrees([]); setCourses([]); setRollNumbers([]);
+        fetchJSON("/Auth/GetFacultyName", { department })
+          .then(data => {
+            setFaculties(data.map(d => ({ value: d.id, label: d.name })));
+          })
+          .catch(() => setError("Failed to load faculties"))
+          .finally(() => setLoadingFaculties(false));
+      }, [session]);
+
+      // Faculty → Degrees
+      useEffect(() => {
+        if (!faculty || !department) { setDegrees([]); return; }
+        setLoadingDegrees(true);
+        setDegree(""); setCourse("");
+        setCourses([]); setRollNumbers([]);
+        fetchJSON("/Auth/GetDegreesByFaculty", { faculty, department })
+          .then(data => {
+            setDegrees(data.map(d => ({ value: d.degree, label: d.degree })));
+          })
+          .catch(() => setError("Failed to load degrees"))
+          .finally(() => setLoadingDegrees(false));
+      }, [faculty]);
+
+      // Degree → Courses
+      useEffect(() => {
+        if (!degree || !faculty || !department) { setCourses([]); return; }
+        setLoadingCourses(true);
+        setCourse("");
+        setRollNumbers([]);
+        fetchJSON("/Auth/GetCoursesByFacultyDegree", { faculty, coursecode: degree, department })
+          .then(data => {
+            setCourses(data.map(d => ({ value: d.courseCode, label: d.courseName })));
+          })
+          .catch(() => setError("Failed to load courses"))
+          .finally(() => setLoadingCourses(false));
+      }, [degree]);
+
+      // Course → Roll Numbers
+      useEffect(() => {
+        if (!course || !department) { setRollNumbers([]); return; }
+        setLoadingRolls(true);
+        fetchJSON("/Auth/GetRollNumbers", { coursecode: course, department })
+          .then(data => {
+            const rolls = data.map(d => d.crollno).sort();
+            setRollNumbers(rolls);
+            if (rolls.length > 0) {
+              setRollStart(rolls[0]);
+              setRollEnd(rolls[rolls.length - 1]);
+            }
+          })
+          .catch(() => setError("Failed to load roll numbers"))
+          .finally(() => setLoadingRolls(false));
+      }, [course]);
+
+      // ── Result Fetching ──
+      const validate = () => {
+        if (!department) return "Please select Result Type.";
+        if (!session) return "Please select Session.";
+        if (!faculty) return "Please select Faculty.";
+        if (!degree) return "Please select Degree.";
+        if (!course) return "Please select Course.";
+        if (!rollStart || !rollEnd) return "Please enter roll number range.";
+        return null;
+      };
+
+      // Build direct portal URL for viewing a marksheet on RTMNU site
+      const getPortalUrl = (rollNo) => {
+        return `${BASE}`;
+      };
+
+      const handleFetch = async () => {
+        const err = validate();
+        if (err) { setError(err); return; }
+        setError("");
+        setResults([]);
+        setLoading(true);
+        setProgress(0);
+        setSuccessCount(0);
+        abortRef.current = false;
+
+        // Build roll range
+        const s = parseInt(rollStart), e = parseInt(rollEnd);
+        let rollList = [];
+        for (let i = s; i <= e; i++) {
+          rollList.push(String(i).padStart(rollStart.length, "0"));
+        }
+
+        // We already have roll numbers from the portal API
+        const registeredSet = new Set(rollNumbers.map(r => String(r)));
+
+        const total = rollList.length;
+        const allResults = [];
+        let successes = 0;
+
+        for (let i = 0; i < rollList.length; i++) {
+          if (abortRef.current) break;
+          const roll = rollList[i];
+          const isRegistered = registeredSet.has(roll);
+
+          if (isRegistered) successes++;
+
+          allResults.push({
+            rollNo: roll,
+            studentName: isRegistered ? "✓ Registered" : "—",
+            result: isRegistered ? "REGISTERED" : "NOT IN LIST",
+            sgpa: "", cgpa: "", percentage: "",
+            subjects: [],
+            remarks: isRegistered ? "View on portal →" : "Not found in portal database",
+            isRegistered,
+          });
+
+          // Update progress in batches for performance
+          if (i % 10 === 0 || i === rollList.length - 1) {
+            setResults([...allResults]);
+            setProgress(Math.round(((i + 1) / total) * 100));
+            setSuccessCount(successes);
+            setCurrentRoll(roll);
+            await new Promise(r => setTimeout(r, 0)); // yield to UI
+          }
+        }
+
+        setResults(allResults);
+        setProgress(100);
+        setSuccessCount(successes);
+        setLoading(false);
+        setCurrentRoll("");
+      };
+
+      // Fetch actual marksheet PDF for a single roll via CORS proxy
+      const fetchMarksheetPdf = async (rollNo) => {
+        setError("");
+        try {
+          const res = await fetchRaw("/GetMarkSheet_report", {
+            rollno: rollNo,
+            session: session,
+            courseCode: course,
+            faculty: faculty,
+            degree: degree,
+            department: department,
+          });
+
+          const buffer = await res.arrayBuffer();
+          const bytes = new Uint8Array(buffer);
+          const header = String.fromCharCode(...bytes.slice(0, 5));
+
+          if (header.startsWith("%PDF") && bytes.length > 500) {
+            const blob = new Blob([buffer], { type: "application/pdf" });
+            const pdfUrl = URL.createObjectURL(blob);
+
+            // Update the result entry with the PDF
+            setResults(prev => prev.map(r =>
+              r.rollNo === rollNo ? { ...r, pdfUrl, remarks: "PDF loaded ✓" } : r
+            ));
+            setExpandedRow(rollNo);
+            return;
+          }
+
+          // Not a PDF — check what we got
+          const text = new TextDecoder().decode(bytes);
+
+          if (text.includes("System.IO.IOException") || text.includes("being used by another process")) {
+            setError(`Server busy for ${rollNo} — the server is generating another PDF. Try again in a few seconds.`);
+            return;
+          }
+
+          // Could be an iframe response
+          const iframeMatch = text.match(/src=["']([^"']*\.pdf[^"']*)/i);
+          if (iframeMatch) {
+            const pdfPath = iframeMatch[1];
+            const fullPdfUrl = pdfPath.startsWith("http") ? pdfPath : `${BASE}${pdfPath.startsWith("/") ? "" : "/"}${pdfPath}`;
+            setResults(prev => prev.map(r =>
+              r.rollNo === rollNo ? { ...r, pdfUrl: fullPdfUrl, isExternalPdf: true, remarks: "PDF found ✓" } : r
+            ));
+            setExpandedRow(rollNo);
+            return;
+          }
+
+          // Server returned the home page (session required)
+          if (text.includes("<!DOCTYPE html") && text.length > 5000) {
+            setError(`Cannot fetch PDF for ${rollNo} — the RTMNU server requires a browser session. Use the "Open on Portal" button instead.`);
+            return;
+          }
+
+          setError(`Unexpected response for ${rollNo}. Use the "Open on Portal" button.`);
+        } catch (e) {
+          setError(`Failed to fetch marksheet for ${rollNo}: ${e.message}`);
+        }
+      };
+
+      const handleStop = () => { abortRef.current = true; };
+
+      const exportCSV = () => {
+        if (!results.length) return;
+        const headers = ["Roll No", "Status", "Registered"];
+        const rows = results.map(r => [
+          r.rollNo, r.result, r.isRegistered ? "Yes" : "No"
+        ]);
+        const csv = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
+        const blob = new Blob([csv], { type: "text/csv" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url; a.download = `RTMNU_Results_${rollStart}-${rollEnd}.csv`; a.click();
+        URL.revokeObjectURL(url);
+      };
+
+      const statusColor = (result) => {
+        if (!result) return "#94a3b8";
+        const r = result.toUpperCase();
+        if (r.includes("REGISTERED") || r.includes("PASS") || r.includes("DISTINCTION")) return "#22c55e";
+        if (r.includes("FAIL") || r.includes("ATKT")) return "#ef4444";
+        if (r.includes("NOT IN LIST") || r.includes("NOT FOUND")) return "#64748b";
+        if (r.includes("ERROR")) return "#f59e0b";
+        return "#8b5cf6";
+      };
+
+      // ── Expanded Row State ──
+      const [expandedRow, setExpandedRow] = useState(null);
+
+      return (
+        <div style={{
+          minHeight: "100vh",
+          background: "linear-gradient(135deg, #0a0e1a 0%, #111827 30%, #1a1040 60%, #0a0e1a 100%)",
+          color: "#e2e8f0",
+          padding: "1.5rem",
+        }}>
+          {/* Decorative Glow */}
+          <div style={{
+            position: "fixed", top: "-200px", right: "-200px",
+            width: "600px", height: "600px",
+            background: "radial-gradient(circle, rgba(99,102,241,0.08) 0%, transparent 70%)",
+            pointerEvents: "none", zIndex: 0,
+          }} />
+          <div style={{
+            position: "fixed", bottom: "-300px", left: "-200px",
+            width: "700px", height: "700px",
+            background: "radial-gradient(circle, rgba(139,92,246,0.06) 0%, transparent 70%)",
+            pointerEvents: "none", zIndex: 0,
+          }} />
+
+          <div style={{ position: "relative", zIndex: 1, maxWidth: "1100px", margin: "0 auto" }}>
+            {/* Header */}
+            <div className="fade-in" style={{ textAlign: "center", marginBottom: "2rem" }}>
+              <div style={{
+                display: "inline-flex", alignItems: "center", gap: "0.5rem",
+                background: "linear-gradient(135deg, rgba(99,102,241,0.2), rgba(139,92,246,0.2))",
+                border: "1px solid rgba(99,102,241,0.3)",
+                borderRadius: "99px",
+                padding: "0.4rem 1.2rem",
+                fontSize: "0.7rem",
+                fontFamily: "'JetBrains Mono', monospace",
+                letterSpacing: "0.12em",
+                textTransform: "uppercase",
+                marginBottom: "1rem",
+                color: "#a5b4fc",
+              }}>
+                <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#22c55e", display: "inline-block" }} />
+                RTMNU · Direct Portal Access
+              </div>
+              <h1 style={{
+                fontSize: "clamp(1.6rem, 4vw, 2.5rem)",
+                fontWeight: "800",
+                background: "linear-gradient(135deg, #a5b4fc, #c084fc, #38bdf8)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                margin: "0 0 0.4rem",
+                lineHeight: 1.15,
+                letterSpacing: "-0.02em",
+              }}>
+                Bulk Result Checker
+              </h1>
+              <p style={{ color: "#64748b", fontSize: "0.85rem", margin: 0 }}>
+                Rashtrasant Tukadoji Maharaj Nagpur University — Live data from rtmnuresults.uonex.in
+              </p>
+            </div>
+
+            {/* Form Card */}
+            <div className="fade-in" style={{
+              maxWidth: "800px",
+              margin: "0 auto 2rem",
+              background: "rgba(255,255,255,0.025)",
+              border: "1px solid rgba(255,255,255,0.08)",
+              borderRadius: "20px",
+              padding: "2rem",
+              backdropFilter: "blur(20px)",
+            }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.25rem" }}>
+                {/* Result Type */}
+                <div style={{ gridColumn: "1 / -1" }}>
+                  <SelectField
+                    id="result-type"
+                    label="Result Type *"
+                    value={department}
+                    onChange={e => setDepartment(e.target.value)}
+                    options={[
+                      { value: "U", label: "UNIVERSITY" },
+                      { value: "A", label: "AUTONOMOUS" },
+                    ]}
+                  />
+                </div>
+
+                {/* Session */}
+                <SelectField
+                  id="session"
+                  label="Session *"
+                  value={session}
+                  onChange={e => setSession(e.target.value)}
+                  options={sessions}
+                  loading={loadingSessions}
+                  disabled={!department}
+                />
+
+                {/* Faculty */}
+                <SelectField
+                  id="faculty"
+                  label="Faculty *"
+                  value={faculty}
+                  onChange={e => setFaculty(e.target.value)}
+                  options={faculties}
+                  loading={loadingFaculties}
+                  disabled={!session}
+                />
+
+                {/* Degree */}
+                <SelectField
+                  id="degree"
+                  label="Degree *"
+                  value={degree}
+                  onChange={e => setDegree(e.target.value)}
+                  options={degrees}
+                  loading={loadingDegrees}
+                  disabled={!faculty}
+                />
+
+                {/* Course */}
+                <SelectField
+                  id="course"
+                  label="Course *"
+                  value={course}
+                  onChange={e => setCourse(e.target.value)}
+                  options={courses}
+                  loading={loadingCourses}
+                  disabled={!degree}
+                />
+
+                {/* Roll Range */}
+                <div>
+                  <label style={labelStyle}>Roll No. From *</label>
+                  <div style={{ position: "relative" }}>
+                    <input
+                      id="roll-start"
+                      value={rollStart}
+                      onChange={e => setRollStart(e.target.value)}
+                      placeholder={loadingRolls ? "Loading..." : "e.g. 110101"}
+                      style={inputStyle}
+                      disabled={loadingRolls}
+                    />
+                    {loadingRolls && (
+                      <div style={{ position: "absolute", right: "0.75rem", top: "50%", transform: "translateY(-50%)" }}>
+                        <Spinner />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <label style={labelStyle}>Roll No. To *</label>
+                  <input
+                    id="roll-end"
+                    value={rollEnd}
+                    onChange={e => setRollEnd(e.target.value)}
+                    placeholder={loadingRolls ? "Loading..." : "e.g. 110150"}
+                    style={inputStyle}
+                    disabled={loadingRolls}
+                  />
+                </div>
+              </div>
+
+              {/* Available Rolls Info */}
+              {rollNumbers.length > 0 && (
+                <div style={{
+                  marginTop: "0.75rem",
+                  padding: "0.6rem 1rem",
+                  background: "rgba(99,102,241,0.08)",
+                  border: "1px solid rgba(99,102,241,0.2)",
+                  borderRadius: "10px",
+                  fontSize: "0.78rem",
+                  color: "#a5b4fc",
+                  fontFamily: "'JetBrains Mono', monospace",
+                }}>
+                  ℹ️ Found <strong>{rollNumbers.length}</strong> roll numbers from portal ({rollNumbers[0]} — {rollNumbers[rollNumbers.length - 1]})
+                </div>
+              )}
+
+              {error && (
+                <div style={{
+                  marginTop: "1rem",
+                  padding: "0.75rem 1rem",
+                  background: "rgba(239,68,68,0.1)",
+                  border: "1px solid rgba(239,68,68,0.3)",
+                  borderRadius: "10px",
+                  color: "#fca5a5",
+                  fontSize: "0.85rem",
+                }}>{error}</div>
+              )}
+
+              <div style={{ display: "flex", gap: "0.75rem", marginTop: "1.5rem", flexWrap: "wrap" }}>
+                <button id="btn-fetch" onClick={handleFetch} disabled={loading} style={{
+                  flex: 1, minWidth: "200px",
+                  padding: "0.8rem",
+                  background: loading ? "rgba(99,102,241,0.3)" : "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                  border: "none",
+                  borderRadius: "12px",
+                  color: "#fff",
+                  fontSize: "0.9rem",
+                  fontWeight: "600",
+                  cursor: loading ? "not-allowed" : "pointer",
+                  transition: "all 0.2s",
+                  fontFamily: "'Inter', sans-serif",
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem",
+                }}>
+                  {loading ? (
+                    <>
+                      <Spinner />
+                      <span>Fetching... {progress}%</span>
+                    </>
+                  ) : "🔍 Check Roll Numbers"}
+                </button>
+
+                {loading && (
+                  <button id="btn-stop" onClick={handleStop} style={{
+                    padding: "0.8rem 1.5rem",
+                    background: "rgba(239,68,68,0.15)",
+                    border: "1px solid rgba(239,68,68,0.3)",
+                    borderRadius: "12px",
+                    color: "#fca5a5",
+                    fontSize: "0.85rem",
+                    cursor: "pointer",
+                    fontFamily: "'Inter', sans-serif",
+                    fontWeight: "500",
+                  }}>
+                    ■ Stop
+                  </button>
+                )}
+
+                {results.length > 0 && !loading && (
+                  <button id="btn-export" onClick={exportCSV} style={{
+                    padding: "0.8rem 1.5rem",
+                    background: "rgba(34,197,94,0.1)",
+                    border: "1px solid rgba(34,197,94,0.3)",
+                    borderRadius: "12px",
+                    color: "#86efac",
+                    fontSize: "0.85rem",
+                    cursor: "pointer",
+                    fontFamily: "'Inter', sans-serif",
+                    fontWeight: "500",
+                  }}>
+                    ↓ Export CSV
+                  </button>
+                )}
+              </div>
+
+              {/* Progress bar */}
+              {loading && (
+                <div style={{ marginTop: "1rem" }}>
+                  <div style={{
+                    background: "rgba(255,255,255,0.06)",
+                    borderRadius: "99px",
+                    height: "5px",
+                    overflow: "hidden",
+                  }}>
+                    <div style={{
+                      width: `${progress}%`,
+                      height: "100%",
+                      background: "linear-gradient(90deg, #6366f1, #c084fc, #38bdf8)",
+                      backgroundSize: "200% 100%",
+                      animation: "shimmer 2s linear infinite",
+                      transition: "width 0.3s ease",
+                      borderRadius: "99px",
+                    }} />
+                  </div>
+                  <p style={{
+                    color: "#64748b", fontSize: "0.75rem", marginTop: "0.4rem",
+                    textAlign: "center", fontFamily: "'JetBrains Mono', monospace",
+                  }}>
+                    Fetching <strong style={{ color: "#a5b4fc" }}>{currentRoll}</strong> · {results.length} done · {successCount} found
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Results Table */}
+            {results.length > 0 && (
+              <div className="fade-in" style={{ maxWidth: "1000px", margin: "0 auto" }}>
+                <div style={{
+                  display: "flex", justifyContent: "space-between", alignItems: "center",
+                  marginBottom: "1rem", flexWrap: "wrap", gap: "0.75rem",
+                }}>
+                  <h2 style={{ margin: 0, fontSize: "1rem", color: "#a5b4fc", fontWeight: "600" }}>
+                    Results — {results.length} record{results.length !== 1 ? "s" : ""}
+                  </h2>
+                  <div style={{ display: "flex", gap: "1rem", fontSize: "0.75rem", fontFamily: "'JetBrains Mono', monospace" }}>
+                    {["REGISTERED", "NOT IN LIST"].map(s => {
+                      const count = results.filter(r => r.result === s).length;
+                      return count > 0 ? (
+                        <span key={s} style={{ color: statusColor(s), display: "flex", alignItems: "center", gap: "0.3rem" }}>
+                          <span style={{ width: 6, height: 6, borderRadius: "50%", background: statusColor(s), display: "inline-block" }} />
+                          {s}: {count}
+                        </span>
+                      ) : null;
+                    })}
+                  </div>
+                </div>
+
+                <div style={{
+                  background: "rgba(255,255,255,0.02)",
+                  border: "1px solid rgba(255,255,255,0.06)",
+                  borderRadius: "16px",
+                  overflow: "hidden",
+                }}>
+                  <div style={{ overflowX: "auto" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
+                      <thead>
+                        <tr style={{ background: "rgba(99,102,241,0.1)" }}>
+                          {["Roll No", "Status", "Action"].map(h => (
+                            <th key={h} style={{
+                              padding: "0.75rem 0.85rem",
+                              textAlign: "left",
+                              fontFamily: "'JetBrains Mono', monospace",
+                              fontWeight: "600",
+                              fontSize: "0.65rem",
+                              letterSpacing: "0.1em",
+                              textTransform: "uppercase",
+                              color: "#64748b",
+                              borderBottom: "1px solid rgba(255,255,255,0.06)",
+                              whiteSpace: "nowrap",
+                            }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {results.map((r, i) => (
+                          <tr
+                            key={r.rollNo}
+                            style={{
+                              background: i % 2 === 0 ? "transparent" : "rgba(255,255,255,0.015)",
+                              transition: "background 0.15s",
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.background = "rgba(99,102,241,0.06)"}
+                            onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? "transparent" : "rgba(255,255,255,0.015)"}
+                          >
+                            <td style={tdStyle}>
+                              <span style={{ fontFamily: "'JetBrains Mono', monospace", color: r.isRegistered ? "#a5b4fc" : "#475569", fontSize: "0.8rem" }}>{r.rollNo}</span>
+                            </td>
+                            <td style={tdStyle}>
+                              <span style={{
+                                display: "inline-block",
+                                padding: "0.15rem 0.55rem",
+                                borderRadius: "99px",
+                                fontSize: "0.65rem",
+                                fontWeight: "700",
+                                letterSpacing: "0.05em",
+                                background: statusColor(r.result) + "18",
+                                color: statusColor(r.result),
+                                border: `1px solid ${statusColor(r.result)}33`,
+                                fontFamily: "'JetBrains Mono', monospace",
+                              }}>
+                                {r.result || "—"}
+                              </span>
+                            </td>
+                            <td style={tdStyle}>
+                              {r.isRegistered ? (
+                                <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
+                                  <a
+                                    href={`${BASE}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{
+                                      padding: "0.2rem 0.5rem",
+                                      background: "rgba(99,102,241,0.15)",
+                                      border: "1px solid rgba(99,102,241,0.3)",
+                                      borderRadius: "6px",
+                                      color: "#a5b4fc",
+                                      fontSize: "0.65rem",
+                                      textDecoration: "none",
+                                      fontFamily: "'JetBrains Mono', monospace",
+                                      whiteSpace: "nowrap",
+                                    }}
+                                  >Open Portal ↗</a>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); fetchMarksheetPdf(r.rollNo); }}
+                                    style={{
+                                      padding: "0.2rem 0.5rem",
+                                      background: "rgba(34,197,94,0.1)",
+                                      border: "1px solid rgba(34,197,94,0.25)",
+                                      borderRadius: "6px",
+                                      color: "#86efac",
+                                      fontSize: "0.65rem",
+                                      cursor: "pointer",
+                                      fontFamily: "'JetBrains Mono', monospace",
+                                      whiteSpace: "nowrap",
+                                    }}
+                                  >{r.pdfUrl ? "View PDF ✓" : "Try PDF ↓"}</button>
+                                </div>
+                              ) : (
+                                <span style={{ color: "#475569", fontSize: "0.75rem" }}>—</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Expanded Marksheet View */}
+                {expandedRow && (() => {
+                  const r = results.find(x => x.rollNo === expandedRow);
+                  if (!r) return null;
+                  if (!r.pdfUrl && !r.rawHtml) return null;
+
+                  return (
+                    <div className="fade-in" style={{
+                      marginTop: "1rem",
+                      background: "rgba(255,255,255,0.03)",
+                      border: "1px solid rgba(99,102,241,0.2)",
+                      borderRadius: "16px",
+                      overflow: "hidden",
+                    }}>
+                      <div style={{
+                        display: "flex", justifyContent: "space-between", alignItems: "center",
+                        padding: "0.75rem 1rem",
+                        background: "rgba(99,102,241,0.08)",
+                        borderBottom: "1px solid rgba(99,102,241,0.15)",
+                      }}>
+                        <span style={{ color: "#a5b4fc", fontWeight: "600", fontSize: "0.85rem" }}>
+                          📋 Marksheet — {r.rollNo} ({r.studentName})
+                        </span>
+                        <div style={{ display: "flex", gap: "0.5rem" }}>
+                          {r.pdfUrl && (
+                            <a href={r.pdfUrl} download={`Marksheet_${r.rollNo}.pdf`} style={{
+                              background: "rgba(34,197,94,0.15)", border: "1px solid rgba(34,197,94,0.3)",
+                              borderRadius: "8px", color: "#86efac", padding: "0.3rem 0.7rem",
+                              cursor: "pointer", fontSize: "0.75rem", textDecoration: "none",
+                            }}>↓ Download PDF</a>
+                          )}
+                          <button onClick={() => setExpandedRow(null)} style={{
+                            background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)",
+                            borderRadius: "8px", color: "#fca5a5", padding: "0.3rem 0.7rem",
+                            cursor: "pointer", fontSize: "0.75rem",
+                          }}>✕ Close</button>
+                        </div>
+                      </div>
+                      {r.pdfUrl ? (
+                        <iframe
+                          src={r.pdfUrl}
+                          style={{ width: "100%", height: "70vh", border: "none", background: "#fff" }}
+                          title={`Marksheet ${r.rollNo}`}
+                        />
+                      ) : r.rawHtml ? (
+                        <div
+                          style={{ padding: "1rem", overflow: "auto", maxHeight: "500px", background: "#fff", color: "#000" }}
+                          dangerouslySetInnerHTML={{ __html: r.rawHtml }}
+                        />
+                      ) : null}
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+
+            {/* Empty State */}
+            {!results.length && !loading && (
+              <div style={{ textAlign: "center", marginTop: "3rem", opacity: 0.4 }}>
+                <div style={{ fontSize: "2.5rem", marginBottom: "0.5rem" }}>📊</div>
+                <p style={{ fontSize: "0.85rem", color: "#64748b" }}>
+                  Select your exam details above and click "Fetch Results" to begin
+                </p>
+              </div>
+            )}
+
+            <div style={{
+              textAlign: "center", marginTop: "3rem", color: "#334155",
+              fontSize: "0.7rem", fontFamily: "'JetBrains Mono', monospace",
+            }}>
+              Data fetched directly from rtmnuresults.uonex.in · For educational use only
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ── Shared Styles ──
+    const labelStyle = {
+      display: "block",
+      marginBottom: "0.35rem",
+      fontSize: "0.68rem",
+      fontFamily: "'JetBrains Mono', monospace",
+      letterSpacing: "0.1em",
+      textTransform: "uppercase",
+      color: "#64748b",
+    };
+
+    const inputStyle = {
+      width: "100%",
+      padding: "0.65rem 0.85rem",
+      background: "rgba(255,255,255,0.05)",
+      border: "1px solid rgba(255,255,255,0.1)",
+      borderRadius: "10px",
+      color: "#e2e8f0",
+      fontSize: "0.85rem",
+      outline: "none",
+      boxSizing: "border-box",
+      fontFamily: "'Inter', sans-serif",
+      transition: "border-color 0.2s, background 0.2s",
+    };
+
+    const tdStyle = {
+      padding: "0.7rem 0.85rem",
+      borderBottom: "1px solid rgba(255,255,255,0.04)",
+      verticalAlign: "middle",
+    };
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<RTMNUChecker />);
+  </script>
+</body>
+</html>
