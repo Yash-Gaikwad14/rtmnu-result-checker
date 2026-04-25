@@ -5,32 +5,159 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>RTMNU Bulk Result Checker</title>
   <meta name="description" content="Bulk result checker for Rashtrasant Tukadoji Maharaj Nagpur University (RTMNU)" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      background: #0a0e1a;
-      font-family: 'Inter', sans-serif;
-      overflow-x: hidden;
+
+    :root {
+      --bg-primary: #06080f;
+      --bg-card: rgba(255,255,255,0.025);
+      --border: rgba(255,255,255,0.06);
+      --accent: #6366f1;
+      --accent2: #8b5cf6;
+      --accent3: #38bdf8;
+      --green: #22c55e;
+      --red: #ef4444;
+      --amber: #f59e0b;
+      --text: #e2e8f0;
+      --text-dim: #64748b;
+      --text-dimmer: #334155;
     }
-    ::-webkit-scrollbar { width: 6px; }
-    ::-webkit-scrollbar-track { background: rgba(255,255,255,0.03); }
-    ::-webkit-scrollbar-thumb { background: rgba(99,102,241,0.4); border-radius: 99px; }
 
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-    @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg-primary);
+      font-family: 'Inter', -apple-system, sans-serif;
+      overflow-x: hidden;
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb {
+      background: linear-gradient(180deg, var(--accent), var(--accent2));
+      border-radius: 99px;
+    }
+
+    /* ── Animations ── */
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeInScale {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    @keyframes slideInLeft {
+      from { opacity: 0; transform: translateX(-20px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
     @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes glow {
+      0%, 100% { box-shadow: 0 0 20px rgba(99,102,241,0.15); }
+      50% { box-shadow: 0 0 40px rgba(99,102,241,0.3); }
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0px) rotate(0deg); }
+      33% { transform: translateY(-8px) rotate(1deg); }
+      66% { transform: translateY(4px) rotate(-1deg); }
+    }
+    @keyframes gradientMove {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    @keyframes borderGlow {
+      0%, 100% { border-color: rgba(99,102,241,0.2); }
+      50% { border-color: rgba(99,102,241,0.5); }
+    }
+    @keyframes particleFloat {
+      0% { transform: translateY(100vh) scale(0); opacity: 0; }
+      10% { opacity: 1; }
+      90% { opacity: 1; }
+      100% { transform: translateY(-10vh) scale(1); opacity: 0; }
+    }
+    @keyframes countUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes ripple {
+      to { transform: scale(4); opacity: 0; }
+    }
+    @keyframes rowSlideIn {
+      from { opacity: 0; transform: translateX(-8px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
 
-    .fade-in { animation: fadeIn 0.4s ease-out forwards; }
-    .pulse-anim { animation: pulse 1.5s ease-in-out infinite; }
+    .fade-in-up { animation: fadeInUp 0.5s ease-out forwards; }
+    .fade-in-scale { animation: fadeInScale 0.4s ease-out forwards; }
+
+    /* ── Particle Background ── */
+    .particles {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .particle {
+      position: absolute;
+      width: 3px;
+      height: 3px;
+      background: var(--accent);
+      border-radius: 50%;
+      opacity: 0;
+      animation: particleFloat linear infinite;
+    }
+
+    /* ── Background Mesh Gradient ── */
+    .mesh-gradient {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      background:
+        radial-gradient(ellipse 60% 50% at 10% 20%, rgba(99,102,241,0.08) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 60% at 80% 70%, rgba(139,92,246,0.06) 0%, transparent 60%),
+        radial-gradient(ellipse 40% 40% at 50% 50%, rgba(56,189,248,0.04) 0%, transparent 60%);
+    }
 
     select option {
-      background: #1a1f35;
-      color: #e2e8f0;
+      background: #141827;
+      color: var(--text);
+    }
+
+    /* Focus ring for inputs */
+    select:focus, input:focus {
+      border-color: var(--accent) !important;
+      box-shadow: 0 0 0 3px rgba(99,102,241,0.15) !important;
+    }
+
+    /* Button ripple */
+    .btn-ripple {
+      position: relative;
+      overflow: hidden;
+    }
+    .btn-ripple::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%);
+      transform: scale(0);
+      opacity: 0;
+    }
+    .btn-ripple:active::after {
+      animation: ripple 0.5s ease-out;
     }
   </style>
 </head>
@@ -38,10 +165,9 @@
   <div id="root"></div>
 
   <script type="text/babel">
-    const { useState, useEffect, useRef, useCallback } = React;
+    const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
     const BASE = "https://rtmnuresults.uonex.in";
-    // Multiple CORS proxies as fallbacks
     const CORS_PROXIES = [
       "https://api.allorigins.win/raw?url=",
       "https://corsproxy.io/?",
@@ -51,7 +177,6 @@
     let currentProxyIndex = 0;
 
     const proxyFetch = async (url, options = {}) => {
-      // Try each proxy in order
       for (let i = 0; i < CORS_PROXIES.length; i++) {
         const proxyIdx = (currentProxyIndex + i) % CORS_PROXIES.length;
         const proxy = CORS_PROXIES[proxyIdx];
@@ -78,7 +203,6 @@
       return res.json();
     };
 
-    // Fetch raw response (for PDF or HTML detection)
     const fetchRaw = async (path, params = {}) => {
       const qs = new URLSearchParams(params).toString();
       const url = `${BASE}${path}${qs ? '?' + qs : ''}`;
@@ -86,21 +210,79 @@
       return res;
     };
 
-    // ── Reusable Components ──
-    const Spinner = () => (
+    // ── Particle Background ──
+    const ParticlesBg = () => {
+      const particles = useMemo(() =>
+        Array.from({ length: 30 }, (_, i) => ({
+          id: i,
+          left: `${Math.random() * 100}%`,
+          size: `${2 + Math.random() * 3}px`,
+          duration: `${8 + Math.random() * 15}s`,
+          delay: `${Math.random() * 10}s`,
+          opacity: 0.15 + Math.random() * 0.25,
+        })), []
+      );
+      return (
+        <div className="particles">
+          {particles.map(p => (
+            <div key={p.id} className="particle" style={{
+              left: p.left,
+              width: p.size, height: p.size,
+              animationDuration: p.duration,
+              animationDelay: p.delay,
+              opacity: p.opacity,
+              background: p.id % 3 === 0 ? '#6366f1' : p.id % 3 === 1 ? '#8b5cf6' : '#38bdf8',
+            }} />
+          ))}
+        </div>
+      );
+    };
+
+    // ── Animated Counter ──
+    const AnimatedNumber = ({ value, duration = 600 }) => {
+      const [display, setDisplay] = useState(0);
+      useEffect(() => {
+        if (value === 0) { setDisplay(0); return; }
+        let start = 0;
+        const step = Math.ceil(value / (duration / 16));
+        const timer = setInterval(() => {
+          start += step;
+          if (start >= value) { setDisplay(value); clearInterval(timer); }
+          else setDisplay(start);
+        }, 16);
+        return () => clearInterval(timer);
+      }, [value]);
+      return <span>{display}</span>;
+    };
+
+    // ── Spinner ──
+    const Spinner = ({ size = 16, color = "#a5b4fc" }) => (
       <div style={{
-        width: 16, height: 16,
-        border: "2px solid rgba(255,255,255,0.15)",
-        borderTopColor: "#a5b4fc",
+        width: size, height: size,
+        border: `2px solid rgba(255,255,255,0.1)`,
+        borderTopColor: color,
         borderRadius: "50%",
         animation: "spin 0.6s linear infinite",
         display: "inline-block",
       }} />
     );
 
-    const SelectField = ({ label, value, onChange, options, loading, disabled, id }) => (
-      <div>
-        <label style={labelStyle}>{label}</label>
+    // ── SelectField ──
+    const SelectField = ({ label, value, onChange, options, loading, disabled, id, icon }) => (
+      <div style={{ position: "relative" }}>
+        <label style={{
+          display: "flex", alignItems: "center", gap: "0.4rem",
+          marginBottom: "0.4rem",
+          fontSize: "0.65rem",
+          fontFamily: "'JetBrains Mono', monospace",
+          letterSpacing: "0.12em",
+          textTransform: "uppercase",
+          color: "#64748b",
+          fontWeight: 500,
+        }}>
+          {icon && <span style={{ fontSize: "0.8rem" }}>{icon}</span>}
+          {label}
+        </label>
         <div style={{ position: "relative" }}>
           <select
             id={id}
@@ -108,27 +290,79 @@
             onChange={onChange}
             disabled={disabled || loading}
             style={{
-              ...inputStyle,
+              width: "100%",
+              padding: "0.7rem 2.5rem 0.7rem 0.9rem",
+              background: disabled ? "rgba(255,255,255,0.02)" : "rgba(255,255,255,0.04)",
+              border: "1px solid rgba(255,255,255,0.08)",
+              borderRadius: "12px",
+              color: value ? "#e2e8f0" : "#64748b",
+              fontSize: "0.85rem",
+              outline: "none",
+              boxSizing: "border-box",
+              fontFamily: "'Inter', sans-serif",
+              transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
               cursor: disabled ? "not-allowed" : "pointer",
-              opacity: disabled ? 0.5 : 1,
+              opacity: disabled ? 0.4 : 1,
               appearance: "none",
-              paddingRight: "2.5rem",
             }}
           >
             <option value="">
-              {loading ? "Loading..." : `Select ${label.replace(" *", "")}`}
+              {loading ? "⏳ Loading..." : `Select ${label.replace(" *", "")}`}
             </option>
             {options.map((o) => (
               <option key={o.value} value={o.value}>{o.label}</option>
             ))}
           </select>
           <div style={{
-            position: "absolute", right: "0.75rem", top: "50%", transform: "translateY(-50%)",
-            pointerEvents: "none", color: "#64748b",
+            position: "absolute", right: "0.8rem", top: "50%", transform: "translateY(-50%)",
+            pointerEvents: "none", color: "#475569", fontSize: "0.7rem",
+            transition: "transform 0.2s",
           }}>
-            {loading ? <Spinner /> : "▾"}
+            {loading ? <Spinner size={14} /> : "▾"}
           </div>
         </div>
+      </div>
+    );
+
+    // ── Stat Card ──
+    const StatCard = ({ icon, label, value, color, delay = 0 }) => (
+      <div style={{
+        background: `linear-gradient(135deg, ${color}08, ${color}03)`,
+        border: `1px solid ${color}20`,
+        borderRadius: "16px",
+        padding: "1.2rem 1rem",
+        textAlign: "center",
+        animation: `fadeInUp 0.5s ease-out ${delay}s both`,
+        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+        cursor: "default",
+        position: "relative",
+        overflow: "hidden",
+      }}
+      onMouseEnter={e => {
+        e.currentTarget.style.transform = "translateY(-2px)";
+        e.currentTarget.style.borderColor = color + "40";
+        e.currentTarget.style.boxShadow = `0 8px 24px ${color}15`;
+      }}
+      onMouseLeave={e => {
+        e.currentTarget.style.transform = "translateY(0)";
+        e.currentTarget.style.borderColor = color + "20";
+        e.currentTarget.style.boxShadow = "none";
+      }}>
+        <div style={{ fontSize: "1.6rem", marginBottom: "0.3rem" }}>{icon}</div>
+        <div style={{
+          fontSize: "1.8rem", fontWeight: "800", color,
+          fontFamily: "'JetBrains Mono', monospace",
+          lineHeight: 1,
+          marginBottom: "0.2rem",
+        }}>
+          <AnimatedNumber value={value} />
+        </div>
+        <div style={{
+          fontSize: "0.6rem", color: "#64748b",
+          fontFamily: "'JetBrains Mono', monospace",
+          textTransform: "uppercase",
+          letterSpacing: "0.12em",
+        }}>{label}</div>
       </div>
     );
 
@@ -160,70 +394,55 @@
       const [currentRoll, setCurrentRoll] = useState("");
       const [error, setError] = useState("");
       const [successCount, setSuccessCount] = useState(0);
+      const [expandedRow, setExpandedRow] = useState(null);
+      const [showResults, setShowResults] = useState(false);
       const abortRef = useRef(false);
 
       // ── Cascading Dropdown Loaders ──
-
-      // Department → Sessions
       useEffect(() => {
         if (!department) { setSessions([]); return; }
         setLoadingSessions(true);
         setSession(""); setFaculty(""); setDegree(""); setCourse("");
         setFaculties([]); setDegrees([]); setCourses([]); setRollNumbers([]);
         fetchJSON("/Auth/GetDegreesBySession", { department })
-          .then(data => {
-            setSessions(data.map(d => ({
-              value: d.sessionYear || d.SessionYear,
-              label: d.sessionYear || d.SessionYear
-            })));
-          })
+          .then(data => setSessions(data.map(d => ({ value: d.sessionYear || d.SessionYear, label: d.sessionYear || d.SessionYear }))))
           .catch(() => setError("Failed to load sessions"))
           .finally(() => setLoadingSessions(false));
       }, [department]);
 
-      // Session → Faculties
       useEffect(() => {
         if (!session || !department) { setFaculties([]); return; }
         setLoadingFaculties(true);
         setFaculty(""); setDegree(""); setCourse("");
         setDegrees([]); setCourses([]); setRollNumbers([]);
         fetchJSON("/Auth/GetFacultyName", { department })
-          .then(data => {
-            setFaculties(data.map(d => ({ value: d.id, label: d.name })));
-          })
+          .then(data => setFaculties(data.map(d => ({ value: d.id, label: d.name }))))
           .catch(() => setError("Failed to load faculties"))
           .finally(() => setLoadingFaculties(false));
       }, [session]);
 
-      // Faculty → Degrees
       useEffect(() => {
         if (!faculty || !department) { setDegrees([]); return; }
         setLoadingDegrees(true);
         setDegree(""); setCourse("");
         setCourses([]); setRollNumbers([]);
         fetchJSON("/Auth/GetDegreesByFaculty", { faculty, department })
-          .then(data => {
-            setDegrees(data.map(d => ({ value: d.degree, label: d.degree })));
-          })
+          .then(data => setDegrees(data.map(d => ({ value: d.degree, label: d.degree }))))
           .catch(() => setError("Failed to load degrees"))
           .finally(() => setLoadingDegrees(false));
       }, [faculty]);
 
-      // Degree → Courses
       useEffect(() => {
         if (!degree || !faculty || !department) { setCourses([]); return; }
         setLoadingCourses(true);
         setCourse("");
         setRollNumbers([]);
         fetchJSON("/Auth/GetCoursesByFacultyDegree", { faculty, coursecode: degree, department })
-          .then(data => {
-            setCourses(data.map(d => ({ value: d.courseCode, label: d.courseName })));
-          })
+          .then(data => setCourses(data.map(d => ({ value: d.courseCode, label: d.courseName }))))
           .catch(() => setError("Failed to load courses"))
           .finally(() => setLoadingCourses(false));
       }, [degree]);
 
-      // Course → Roll Numbers
       useEffect(() => {
         if (!course || !department) { setRollNumbers([]); return; }
         setLoadingRolls(true);
@@ -240,7 +459,7 @@
           .finally(() => setLoadingRolls(false));
       }, [course]);
 
-      // ── Result Fetching ──
+      // ── Validation ──
       const validate = () => {
         if (!department) return "Please select Result Type.";
         if (!session) return "Please select Session.";
@@ -251,11 +470,7 @@
         return null;
       };
 
-      // Build direct portal URL for viewing a marksheet on RTMNU site
-      const getPortalUrl = (rollNo) => {
-        return `${BASE}`;
-      };
-
+      // ── Fetch Logic ──
       const handleFetch = async () => {
         const err = validate();
         if (err) { setError(err); return; }
@@ -264,18 +479,16 @@
         setLoading(true);
         setProgress(0);
         setSuccessCount(0);
+        setShowResults(false);
         abortRef.current = false;
 
-        // Build roll range
         const s = parseInt(rollStart), e = parseInt(rollEnd);
         let rollList = [];
         for (let i = s; i <= e; i++) {
           rollList.push(String(i).padStart(rollStart.length, "0"));
         }
 
-        // We already have roll numbers from the portal API
         const registeredSet = new Set(rollNumbers.map(r => String(r)));
-
         const total = rollList.length;
         const allResults = [];
         let successes = 0;
@@ -284,26 +497,21 @@
           if (abortRef.current) break;
           const roll = rollList[i];
           const isRegistered = registeredSet.has(roll);
-
           if (isRegistered) successes++;
 
           allResults.push({
             rollNo: roll,
             studentName: isRegistered ? "✓ Registered" : "—",
             result: isRegistered ? "REGISTERED" : "NOT IN LIST",
-            sgpa: "", cgpa: "", percentage: "",
-            subjects: [],
-            remarks: isRegistered ? "View on portal →" : "Not found in portal database",
             isRegistered,
           });
 
-          // Update progress in batches for performance
           if (i % 10 === 0 || i === rollList.length - 1) {
             setResults([...allResults]);
             setProgress(Math.round(((i + 1) / total) * 100));
             setSuccessCount(successes);
             setCurrentRoll(roll);
-            await new Promise(r => setTimeout(r, 0)); // yield to UI
+            await new Promise(r => setTimeout(r, 0));
           }
         }
 
@@ -312,21 +520,16 @@
         setSuccessCount(successes);
         setLoading(false);
         setCurrentRoll("");
+        setTimeout(() => setShowResults(true), 100);
       };
 
-      // Fetch actual marksheet PDF for a single roll via CORS proxy
       const fetchMarksheetPdf = async (rollNo) => {
         setError("");
         try {
           const res = await fetchRaw("/GetMarkSheet_report", {
-            rollno: rollNo,
-            session: session,
-            courseCode: course,
-            faculty: faculty,
-            degree: degree,
-            department: department,
+            rollno: rollNo, session, courseCode: course,
+            faculty, degree, department,
           });
-
           const buffer = await res.arrayBuffer();
           const bytes = new Uint8Array(buffer);
           const header = String.fromCharCode(...bytes.slice(0, 5));
@@ -334,8 +537,6 @@
           if (header.startsWith("%PDF") && bytes.length > 500) {
             const blob = new Blob([buffer], { type: "application/pdf" });
             const pdfUrl = URL.createObjectURL(blob);
-
-            // Update the result entry with the PDF
             setResults(prev => prev.map(r =>
               r.rollNo === rollNo ? { ...r, pdfUrl, remarks: "PDF loaded ✓" } : r
             ));
@@ -343,35 +544,16 @@
             return;
           }
 
-          // Not a PDF — check what we got
           const text = new TextDecoder().decode(bytes);
-
-          if (text.includes("System.IO.IOException") || text.includes("being used by another process")) {
-            setError(`Server busy for ${rollNo} — the server is generating another PDF. Try again in a few seconds.`);
-            return;
+          if (text.includes("System.IO.IOException")) {
+            setError(`⚡ Server busy generating PDF for ${rollNo}. Try again in a few seconds.`);
+          } else if (text.includes("<!DOCTYPE html") && text.length > 5000) {
+            setError(`🔒 RTMNU server requires a browser session for PDFs. Use "Open Portal" instead.`);
+          } else {
+            setError(`Could not load PDF for ${rollNo}. Use "Open Portal" button.`);
           }
-
-          // Could be an iframe response
-          const iframeMatch = text.match(/src=["']([^"']*\.pdf[^"']*)/i);
-          if (iframeMatch) {
-            const pdfPath = iframeMatch[1];
-            const fullPdfUrl = pdfPath.startsWith("http") ? pdfPath : `${BASE}${pdfPath.startsWith("/") ? "" : "/"}${pdfPath}`;
-            setResults(prev => prev.map(r =>
-              r.rollNo === rollNo ? { ...r, pdfUrl: fullPdfUrl, isExternalPdf: true, remarks: "PDF found ✓" } : r
-            ));
-            setExpandedRow(rollNo);
-            return;
-          }
-
-          // Server returned the home page (session required)
-          if (text.includes("<!DOCTYPE html") && text.length > 5000) {
-            setError(`Cannot fetch PDF for ${rollNo} — the RTMNU server requires a browser session. Use the "Open on Portal" button instead.`);
-            return;
-          }
-
-          setError(`Unexpected response for ${rollNo}. Use the "Open on Portal" button.`);
         } catch (e) {
-          setError(`Failed to fetch marksheet for ${rollNo}: ${e.message}`);
+          setError(`Network error: ${e.message}`);
         }
       };
 
@@ -380,319 +562,356 @@
       const exportCSV = () => {
         if (!results.length) return;
         const headers = ["Roll No", "Status", "Registered"];
-        const rows = results.map(r => [
-          r.rollNo, r.result, r.isRegistered ? "Yes" : "No"
-        ]);
+        const rows = results.map(r => [r.rollNo, r.result, r.isRegistered ? "Yes" : "No"]);
         const csv = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
         const blob = new Blob([csv], { type: "text/csv" });
-        const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
-        a.href = url; a.download = `RTMNU_Results_${rollStart}-${rollEnd}.csv`; a.click();
-        URL.revokeObjectURL(url);
+        a.href = URL.createObjectURL(blob);
+        a.download = `RTMNU_Results_${rollStart}-${rollEnd}.csv`;
+        a.click();
       };
 
       const statusColor = (result) => {
-        if (!result) return "#94a3b8";
-        const r = result.toUpperCase();
-        if (r.includes("REGISTERED") || r.includes("PASS") || r.includes("DISTINCTION")) return "#22c55e";
+        const r = (result || "").toUpperCase();
+        if (r.includes("REGISTERED") || r.includes("PASS")) return "#22c55e";
         if (r.includes("FAIL") || r.includes("ATKT")) return "#ef4444";
-        if (r.includes("NOT IN LIST") || r.includes("NOT FOUND")) return "#64748b";
+        if (r.includes("NOT IN LIST") || r.includes("NOT FOUND")) return "#475569";
         if (r.includes("ERROR")) return "#f59e0b";
         return "#8b5cf6";
       };
 
-      // ── Expanded Row State ──
-      const [expandedRow, setExpandedRow] = useState(null);
+      const totalCount = results.length;
+      const registeredCount = results.filter(r => r.isRegistered).length;
+      const notFoundCount = totalCount - registeredCount;
+
+      // ── Form Completion Indicator ──
+      const formSteps = [department, session, faculty, degree, course].filter(Boolean).length;
 
       return (
-        <div style={{
-          minHeight: "100vh",
-          background: "linear-gradient(135deg, #0a0e1a 0%, #111827 30%, #1a1040 60%, #0a0e1a 100%)",
-          color: "#e2e8f0",
-          padding: "1.5rem",
-        }}>
-          {/* Decorative Glow */}
-          <div style={{
-            position: "fixed", top: "-200px", right: "-200px",
-            width: "600px", height: "600px",
-            background: "radial-gradient(circle, rgba(99,102,241,0.08) 0%, transparent 70%)",
-            pointerEvents: "none", zIndex: 0,
-          }} />
-          <div style={{
-            position: "fixed", bottom: "-300px", left: "-200px",
-            width: "700px", height: "700px",
-            background: "radial-gradient(circle, rgba(139,92,246,0.06) 0%, transparent 70%)",
-            pointerEvents: "none", zIndex: 0,
-          }} />
+        <div style={{ minHeight: "100vh", position: "relative" }}>
+          <div className="mesh-gradient" />
+          <ParticlesBg />
 
-          <div style={{ position: "relative", zIndex: 1, maxWidth: "1100px", margin: "0 auto" }}>
-            {/* Header */}
-            <div className="fade-in" style={{ textAlign: "center", marginBottom: "2rem" }}>
+          <div style={{ position: "relative", zIndex: 1, maxWidth: "1100px", margin: "0 auto", padding: "1.5rem" }}>
+
+            {/* ── Header ── */}
+            <header className="fade-in-up" style={{ textAlign: "center", marginBottom: "2.5rem", paddingTop: "1rem" }}>
               <div style={{
                 display: "inline-flex", alignItems: "center", gap: "0.5rem",
-                background: "linear-gradient(135deg, rgba(99,102,241,0.2), rgba(139,92,246,0.2))",
-                border: "1px solid rgba(99,102,241,0.3)",
+                background: "linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.15))",
+                border: "1px solid rgba(99,102,241,0.2)",
                 borderRadius: "99px",
-                padding: "0.4rem 1.2rem",
-                fontSize: "0.7rem",
+                padding: "0.4rem 1.3rem",
+                fontSize: "0.65rem",
                 fontFamily: "'JetBrains Mono', monospace",
-                letterSpacing: "0.12em",
+                letterSpacing: "0.15em",
                 textTransform: "uppercase",
-                marginBottom: "1rem",
+                marginBottom: "1.2rem",
                 color: "#a5b4fc",
+                backdropFilter: "blur(10px)",
               }}>
-                <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#22c55e", display: "inline-block" }} />
-                RTMNU · Direct Portal Access
+                <span style={{
+                  width: 7, height: 7, borderRadius: "50%",
+                  background: "#22c55e",
+                  display: "inline-block",
+                  boxShadow: "0 0 8px rgba(34,197,94,0.5)",
+                  animation: "glow 2s ease-in-out infinite",
+                }} />
+                Live · Direct Portal Access
               </div>
               <h1 style={{
-                fontSize: "clamp(1.6rem, 4vw, 2.5rem)",
-                fontWeight: "800",
-                background: "linear-gradient(135deg, #a5b4fc, #c084fc, #38bdf8)",
+                fontSize: "clamp(2rem, 5vw, 3.2rem)",
+                fontWeight: "900",
+                background: "linear-gradient(135deg, #c7d2fe 0%, #a5b4fc 20%, #c084fc 50%, #38bdf8 80%, #6366f1 100%)",
+                backgroundSize: "200% auto",
+                animation: "gradientMove 4s ease infinite",
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent",
-                margin: "0 0 0.4rem",
-                lineHeight: 1.15,
-                letterSpacing: "-0.02em",
+                margin: "0 0 0.5rem",
+                lineHeight: 1.1,
+                letterSpacing: "-0.03em",
               }}>
-                Bulk Result Checker
+                RTMNU Results
               </h1>
-              <p style={{ color: "#64748b", fontSize: "0.85rem", margin: 0 }}>
-                Rashtrasant Tukadoji Maharaj Nagpur University — Live data from rtmnuresults.uonex.in
+              <p style={{
+                color: "#475569", fontSize: "0.85rem", margin: 0,
+                fontWeight: 400,
+              }}>
+                Rashtrasant Tukadoji Maharaj Nagpur University · Bulk Checker
               </p>
-            </div>
 
-            {/* Form Card */}
-            <div className="fade-in" style={{
-              maxWidth: "800px",
+              {/* Form progress dots */}
+              <div style={{
+                display: "flex", justifyContent: "center", gap: "0.4rem",
+                marginTop: "1.2rem",
+              }}>
+                {[0,1,2,3,4].map(i => (
+                  <div key={i} style={{
+                    width: i < formSteps ? "24px" : "8px",
+                    height: "8px",
+                    borderRadius: "99px",
+                    background: i < formSteps
+                      ? "linear-gradient(90deg, #6366f1, #8b5cf6)"
+                      : "rgba(255,255,255,0.08)",
+                    transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
+                  }} />
+                ))}
+              </div>
+            </header>
+
+            {/* ── Form Card ── */}
+            <div className="fade-in-scale" style={{
+              maxWidth: "820px",
               margin: "0 auto 2rem",
-              background: "rgba(255,255,255,0.025)",
-              border: "1px solid rgba(255,255,255,0.08)",
-              borderRadius: "20px",
-              padding: "2rem",
+              background: "linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01))",
+              border: "1px solid rgba(255,255,255,0.06)",
+              borderRadius: "24px",
+              padding: "2rem 2.2rem",
               backdropFilter: "blur(20px)",
+              boxShadow: "0 4px 40px rgba(0,0,0,0.2)",
             }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.25rem" }}>
-                {/* Result Type */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.3rem" }}>
                 <div style={{ gridColumn: "1 / -1" }}>
-                  <SelectField
-                    id="result-type"
-                    label="Result Type *"
-                    value={department}
-                    onChange={e => setDepartment(e.target.value)}
-                    options={[
-                      { value: "U", label: "UNIVERSITY" },
-                      { value: "A", label: "AUTONOMOUS" },
-                    ]}
-                  />
+                  <SelectField id="result-type" label="Result Type *" icon="🏛️"
+                    value={department} onChange={e => setDepartment(e.target.value)}
+                    options={[{ value: "U", label: "UNIVERSITY" }, { value: "A", label: "AUTONOMOUS" }]} />
                 </div>
 
-                {/* Session */}
-                <SelectField
-                  id="session"
-                  label="Session *"
-                  value={session}
-                  onChange={e => setSession(e.target.value)}
-                  options={sessions}
-                  loading={loadingSessions}
-                  disabled={!department}
-                />
+                <SelectField id="session" label="Session *" icon="📅"
+                  value={session} onChange={e => setSession(e.target.value)}
+                  options={sessions} loading={loadingSessions} disabled={!department} />
 
-                {/* Faculty */}
-                <SelectField
-                  id="faculty"
-                  label="Faculty *"
-                  value={faculty}
-                  onChange={e => setFaculty(e.target.value)}
-                  options={faculties}
-                  loading={loadingFaculties}
-                  disabled={!session}
-                />
+                <SelectField id="faculty" label="Faculty *" icon="🎓"
+                  value={faculty} onChange={e => setFaculty(e.target.value)}
+                  options={faculties} loading={loadingFaculties} disabled={!session} />
 
-                {/* Degree */}
-                <SelectField
-                  id="degree"
-                  label="Degree *"
-                  value={degree}
-                  onChange={e => setDegree(e.target.value)}
-                  options={degrees}
-                  loading={loadingDegrees}
-                  disabled={!faculty}
-                />
+                <SelectField id="degree" label="Degree *" icon="📜"
+                  value={degree} onChange={e => setDegree(e.target.value)}
+                  options={degrees} loading={loadingDegrees} disabled={!faculty} />
 
-                {/* Course */}
-                <SelectField
-                  id="course"
-                  label="Course *"
-                  value={course}
-                  onChange={e => setCourse(e.target.value)}
-                  options={courses}
-                  loading={loadingCourses}
-                  disabled={!degree}
-                />
+                <SelectField id="course" label="Course *" icon="📚"
+                  value={course} onChange={e => setCourse(e.target.value)}
+                  options={courses} loading={loadingCourses} disabled={!degree} />
 
-                {/* Roll Range */}
                 <div>
-                  <label style={labelStyle}>Roll No. From *</label>
+                  <label style={{
+                    display: "flex", alignItems: "center", gap: "0.4rem",
+                    marginBottom: "0.4rem", fontSize: "0.65rem",
+                    fontFamily: "'JetBrains Mono', monospace",
+                    letterSpacing: "0.12em", textTransform: "uppercase",
+                    color: "#64748b", fontWeight: 500,
+                  }}>🔢 Roll From *</label>
                   <div style={{ position: "relative" }}>
-                    <input
-                      id="roll-start"
-                      value={rollStart}
+                    <input id="roll-start" value={rollStart}
                       onChange={e => setRollStart(e.target.value)}
                       placeholder={loadingRolls ? "Loading..." : "e.g. 110101"}
-                      style={inputStyle}
                       disabled={loadingRolls}
-                    />
-                    {loadingRolls && (
-                      <div style={{ position: "absolute", right: "0.75rem", top: "50%", transform: "translateY(-50%)" }}>
-                        <Spinner />
-                      </div>
-                    )}
+                      style={{
+                        width: "100%", padding: "0.7rem 0.9rem",
+                        background: "rgba(255,255,255,0.04)",
+                        border: "1px solid rgba(255,255,255,0.08)",
+                        borderRadius: "12px", color: "#e2e8f0",
+                        fontSize: "0.85rem", outline: "none",
+                        fontFamily: "'JetBrains Mono', monospace",
+                        transition: "all 0.25s",
+                      }} />
+                    {loadingRolls && <div style={{ position: "absolute", right: "0.8rem", top: "50%", transform: "translateY(-50%)" }}><Spinner size={14} /></div>}
                   </div>
                 </div>
 
                 <div>
-                  <label style={labelStyle}>Roll No. To *</label>
-                  <input
-                    id="roll-end"
-                    value={rollEnd}
+                  <label style={{
+                    display: "flex", alignItems: "center", gap: "0.4rem",
+                    marginBottom: "0.4rem", fontSize: "0.65rem",
+                    fontFamily: "'JetBrains Mono', monospace",
+                    letterSpacing: "0.12em", textTransform: "uppercase",
+                    color: "#64748b", fontWeight: 500,
+                  }}>🔢 Roll To *</label>
+                  <input id="roll-end" value={rollEnd}
                     onChange={e => setRollEnd(e.target.value)}
                     placeholder={loadingRolls ? "Loading..." : "e.g. 110150"}
-                    style={inputStyle}
                     disabled={loadingRolls}
-                  />
+                    style={{
+                      width: "100%", padding: "0.7rem 0.9rem",
+                      background: "rgba(255,255,255,0.04)",
+                      border: "1px solid rgba(255,255,255,0.08)",
+                      borderRadius: "12px", color: "#e2e8f0",
+                      fontSize: "0.85rem", outline: "none",
+                      fontFamily: "'JetBrains Mono', monospace",
+                      transition: "all 0.25s",
+                    }} />
                 </div>
               </div>
 
-              {/* Available Rolls Info */}
+              {/* Roll info banner */}
               {rollNumbers.length > 0 && (
                 <div style={{
-                  marginTop: "0.75rem",
-                  padding: "0.6rem 1rem",
-                  background: "rgba(99,102,241,0.08)",
-                  border: "1px solid rgba(99,102,241,0.2)",
-                  borderRadius: "10px",
-                  fontSize: "0.78rem",
-                  color: "#a5b4fc",
+                  marginTop: "1rem", padding: "0.7rem 1rem",
+                  background: "linear-gradient(135deg, rgba(99,102,241,0.08), rgba(139,92,246,0.05))",
+                  border: "1px solid rgba(99,102,241,0.15)",
+                  borderRadius: "12px",
+                  fontSize: "0.75rem", color: "#a5b4fc",
                   fontFamily: "'JetBrains Mono', monospace",
+                  display: "flex", alignItems: "center", gap: "0.5rem",
+                  animation: "fadeInUp 0.3s ease-out",
                 }}>
-                  ℹ️ Found <strong>{rollNumbers.length}</strong> roll numbers from portal ({rollNumbers[0]} — {rollNumbers[rollNumbers.length - 1]})
+                  <span style={{ fontSize: "1rem" }}>📋</span>
+                  Found <strong>{rollNumbers.length}</strong> roll numbers ({rollNumbers[0]} — {rollNumbers[rollNumbers.length - 1]})
                 </div>
               )}
 
+              {/* Error */}
               {error && (
                 <div style={{
-                  marginTop: "1rem",
-                  padding: "0.75rem 1rem",
-                  background: "rgba(239,68,68,0.1)",
-                  border: "1px solid rgba(239,68,68,0.3)",
-                  borderRadius: "10px",
-                  color: "#fca5a5",
-                  fontSize: "0.85rem",
-                }}>{error}</div>
+                  marginTop: "1rem", padding: "0.75rem 1rem",
+                  background: "linear-gradient(135deg, rgba(239,68,68,0.08), rgba(239,68,68,0.03))",
+                  border: "1px solid rgba(239,68,68,0.2)",
+                  borderRadius: "12px", color: "#fca5a5",
+                  fontSize: "0.82rem",
+                  animation: "fadeInUp 0.3s ease-out",
+                  display: "flex", alignItems: "flex-start", gap: "0.5rem",
+                }}>
+                  <span>⚠️</span>
+                  <span>{error}</span>
+                </div>
               )}
 
+              {/* Action Buttons */}
               <div style={{ display: "flex", gap: "0.75rem", marginTop: "1.5rem", flexWrap: "wrap" }}>
-                <button id="btn-fetch" onClick={handleFetch} disabled={loading} style={{
-                  flex: 1, minWidth: "200px",
-                  padding: "0.8rem",
-                  background: loading ? "rgba(99,102,241,0.3)" : "linear-gradient(135deg, #6366f1, #8b5cf6)",
-                  border: "none",
-                  borderRadius: "12px",
-                  color: "#fff",
-                  fontSize: "0.9rem",
-                  fontWeight: "600",
-                  cursor: loading ? "not-allowed" : "pointer",
-                  transition: "all 0.2s",
-                  fontFamily: "'Inter', sans-serif",
-                  display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem",
-                }}>
-                  {loading ? (
-                    <>
-                      <Spinner />
-                      <span>Fetching... {progress}%</span>
-                    </>
-                  ) : "🔍 Check Roll Numbers"}
+                <button id="btn-fetch" onClick={handleFetch} disabled={loading}
+                  className="btn-ripple"
+                  style={{
+                    flex: 1, minWidth: "200px", padding: "0.85rem",
+                    background: loading
+                      ? "rgba(99,102,241,0.2)"
+                      : "linear-gradient(135deg, #6366f1, #7c3aed, #8b5cf6)",
+                    backgroundSize: "200% 200%",
+                    animation: loading ? "none" : "gradientMove 3s ease infinite",
+                    border: "none", borderRadius: "14px",
+                    color: "#fff", fontSize: "0.9rem", fontWeight: "700",
+                    cursor: loading ? "not-allowed" : "pointer",
+                    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                    fontFamily: "'Inter', sans-serif",
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: "0.6rem",
+                    boxShadow: loading ? "none" : "0 4px 20px rgba(99,102,241,0.3)",
+                    letterSpacing: "0.02em",
+                  }}
+                  onMouseEnter={e => !loading && (e.currentTarget.style.transform = "translateY(-1px)", e.currentTarget.style.boxShadow = "0 6px 28px rgba(99,102,241,0.4)")}
+                  onMouseLeave={e => !loading && (e.currentTarget.style.transform = "translateY(0)", e.currentTarget.style.boxShadow = "0 4px 20px rgba(99,102,241,0.3)")}
+                >
+                  {loading ? (<><Spinner size={16} /> <span>Processing... {progress}%</span></>) : "🔍 Check Roll Numbers"}
                 </button>
 
                 {loading && (
                   <button id="btn-stop" onClick={handleStop} style={{
-                    padding: "0.8rem 1.5rem",
-                    background: "rgba(239,68,68,0.15)",
-                    border: "1px solid rgba(239,68,68,0.3)",
-                    borderRadius: "12px",
-                    color: "#fca5a5",
-                    fontSize: "0.85rem",
-                    cursor: "pointer",
-                    fontFamily: "'Inter', sans-serif",
-                    fontWeight: "500",
-                  }}>
-                    ■ Stop
-                  </button>
+                    padding: "0.85rem 1.5rem",
+                    background: "rgba(239,68,68,0.1)",
+                    border: "1px solid rgba(239,68,68,0.25)",
+                    borderRadius: "14px", color: "#fca5a5",
+                    fontSize: "0.85rem", fontWeight: "600",
+                    cursor: "pointer", fontFamily: "'Inter', sans-serif",
+                    transition: "all 0.2s",
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = "rgba(239,68,68,0.2)"}
+                  onMouseLeave={e => e.currentTarget.style.background = "rgba(239,68,68,0.1)"}
+                  >■ Stop</button>
                 )}
 
                 {results.length > 0 && !loading && (
                   <button id="btn-export" onClick={exportCSV} style={{
-                    padding: "0.8rem 1.5rem",
-                    background: "rgba(34,197,94,0.1)",
-                    border: "1px solid rgba(34,197,94,0.3)",
-                    borderRadius: "12px",
-                    color: "#86efac",
-                    fontSize: "0.85rem",
-                    cursor: "pointer",
-                    fontFamily: "'Inter', sans-serif",
-                    fontWeight: "500",
-                  }}>
-                    ↓ Export CSV
-                  </button>
+                    padding: "0.85rem 1.5rem",
+                    background: "rgba(34,197,94,0.08)",
+                    border: "1px solid rgba(34,197,94,0.2)",
+                    borderRadius: "14px", color: "#86efac",
+                    fontSize: "0.85rem", fontWeight: "600",
+                    cursor: "pointer", fontFamily: "'Inter', sans-serif",
+                    transition: "all 0.2s",
+                    display: "flex", alignItems: "center", gap: "0.4rem",
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = "rgba(34,197,94,0.15)"}
+                  onMouseLeave={e => e.currentTarget.style.background = "rgba(34,197,94,0.08)"}
+                  >📥 Export CSV</button>
                 )}
               </div>
 
-              {/* Progress bar */}
+              {/* Progress Bar */}
               {loading && (
-                <div style={{ marginTop: "1rem" }}>
+                <div style={{ marginTop: "1.2rem", animation: "fadeInUp 0.3s ease-out" }}>
                   <div style={{
-                    background: "rgba(255,255,255,0.06)",
-                    borderRadius: "99px",
-                    height: "5px",
-                    overflow: "hidden",
+                    background: "rgba(255,255,255,0.04)",
+                    borderRadius: "99px", height: "6px", overflow: "hidden",
+                    border: "1px solid rgba(255,255,255,0.04)",
                   }}>
                     <div style={{
                       width: `${progress}%`,
                       height: "100%",
-                      background: "linear-gradient(90deg, #6366f1, #c084fc, #38bdf8)",
-                      backgroundSize: "200% 100%",
-                      animation: "shimmer 2s linear infinite",
+                      background: "linear-gradient(90deg, #6366f1, #a78bfa, #38bdf8, #6366f1)",
+                      backgroundSize: "300% 100%",
+                      animation: "shimmer 1.5s linear infinite",
                       transition: "width 0.3s ease",
                       borderRadius: "99px",
+                      boxShadow: "0 0 12px rgba(99,102,241,0.4)",
                     }} />
                   </div>
-                  <p style={{
-                    color: "#64748b", fontSize: "0.75rem", marginTop: "0.4rem",
-                    textAlign: "center", fontFamily: "'JetBrains Mono', monospace",
+                  <div style={{
+                    display: "flex", justifyContent: "space-between", alignItems: "center",
+                    marginTop: "0.5rem",
                   }}>
-                    Fetching <strong style={{ color: "#a5b4fc" }}>{currentRoll}</strong> · {results.length} done · {successCount} found
-                  </p>
+                    <span style={{ color: "#475569", fontSize: "0.7rem", fontFamily: "'JetBrains Mono', monospace" }}>
+                      Checking <strong style={{ color: "#a5b4fc" }}>{currentRoll}</strong>
+                    </span>
+                    <span style={{ color: "#475569", fontSize: "0.7rem", fontFamily: "'JetBrains Mono', monospace" }}>
+                      {results.length}/{parseInt(rollEnd) - parseInt(rollStart) + 1} · <strong style={{ color: "#22c55e" }}>{successCount}</strong> found
+                    </span>
+                  </div>
                 </div>
               )}
             </div>
 
-            {/* Results Table */}
+            {/* ── Statistics Cards ── */}
+            {results.length > 0 && !loading && (
+              <div style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(3, 1fr)",
+                gap: "1rem",
+                maxWidth: "820px",
+                margin: "0 auto 2rem",
+              }}>
+                <StatCard icon="📊" label="Total Checked" value={totalCount} color="#a5b4fc" delay={0} />
+                <StatCard icon="✅" label="Registered" value={registeredCount} color="#22c55e" delay={0.1} />
+                <StatCard icon="❌" label="Not Found" value={notFoundCount} color="#64748b" delay={0.2} />
+              </div>
+            )}
+
+            {/* ── Results Table ── */}
             {results.length > 0 && (
-              <div className="fade-in" style={{ maxWidth: "1000px", margin: "0 auto" }}>
+              <div style={{
+                maxWidth: "900px", margin: "0 auto",
+                animation: "fadeInUp 0.5s ease-out",
+              }}>
                 <div style={{
                   display: "flex", justifyContent: "space-between", alignItems: "center",
-                  marginBottom: "1rem", flexWrap: "wrap", gap: "0.75rem",
+                  marginBottom: "1rem",
                 }}>
-                  <h2 style={{ margin: 0, fontSize: "1rem", color: "#a5b4fc", fontWeight: "600" }}>
-                    Results — {results.length} record{results.length !== 1 ? "s" : ""}
+                  <h2 style={{
+                    margin: 0, fontSize: "0.95rem", fontWeight: "700",
+                    background: "linear-gradient(90deg, #a5b4fc, #c084fc)",
+                    WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+                  }}>
+                    Results — {totalCount} records
                   </h2>
-                  <div style={{ display: "flex", gap: "1rem", fontSize: "0.75rem", fontFamily: "'JetBrains Mono', monospace" }}>
-                    {["REGISTERED", "NOT IN LIST"].map(s => {
+                  <div style={{ display: "flex", gap: "1rem", fontSize: "0.7rem", fontFamily: "'JetBrains Mono', monospace" }}>
+                    {[{ s: "REGISTERED", l: "Found" }, { s: "NOT IN LIST", l: "Missing" }].map(({ s, l }) => {
                       const count = results.filter(r => r.result === s).length;
                       return count > 0 ? (
-                        <span key={s} style={{ color: statusColor(s), display: "flex", alignItems: "center", gap: "0.3rem" }}>
-                          <span style={{ width: 6, height: 6, borderRadius: "50%", background: statusColor(s), display: "inline-block" }} />
-                          {s}: {count}
+                        <span key={s} style={{ color: statusColor(s), display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                          <span style={{
+                            width: 7, height: 7, borderRadius: "50%",
+                            background: statusColor(s),
+                            display: "inline-block",
+                            boxShadow: `0 0 6px ${statusColor(s)}60`,
+                          }} />
+                          {l}: {count}
                         </span>
                       ) : null;
                     })}
@@ -700,26 +919,26 @@
                 </div>
 
                 <div style={{
-                  background: "rgba(255,255,255,0.02)",
-                  border: "1px solid rgba(255,255,255,0.06)",
-                  borderRadius: "16px",
+                  background: "rgba(255,255,255,0.015)",
+                  border: "1px solid rgba(255,255,255,0.05)",
+                  borderRadius: "20px",
                   overflow: "hidden",
+                  boxShadow: "0 2px 20px rgba(0,0,0,0.15)",
                 }}>
                   <div style={{ overflowX: "auto" }}>
                     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
                       <thead>
-                        <tr style={{ background: "rgba(99,102,241,0.1)" }}>
-                          {["Roll No", "Status", "Action"].map(h => (
+                        <tr style={{ background: "rgba(99,102,241,0.06)" }}>
+                          {["#", "Roll No", "Status", "Action"].map(h => (
                             <th key={h} style={{
-                              padding: "0.75rem 0.85rem",
+                              padding: "0.9rem 1rem",
                               textAlign: "left",
                               fontFamily: "'JetBrains Mono', monospace",
-                              fontWeight: "600",
-                              fontSize: "0.65rem",
-                              letterSpacing: "0.1em",
+                              fontWeight: "600", fontSize: "0.6rem",
+                              letterSpacing: "0.14em",
                               textTransform: "uppercase",
-                              color: "#64748b",
-                              borderBottom: "1px solid rgba(255,255,255,0.06)",
+                              color: "#475569",
+                              borderBottom: "1px solid rgba(255,255,255,0.04)",
                               whiteSpace: "nowrap",
                             }}>{h}</th>
                           ))}
@@ -727,70 +946,85 @@
                       </thead>
                       <tbody>
                         {results.map((r, i) => (
-                          <tr
-                            key={r.rollNo}
+                          <tr key={r.rollNo}
                             style={{
-                              background: i % 2 === 0 ? "transparent" : "rgba(255,255,255,0.015)",
-                              transition: "background 0.15s",
+                              background: i % 2 === 0 ? "transparent" : "rgba(255,255,255,0.01)",
+                              transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                              animation: showResults ? `rowSlideIn 0.3s ease-out ${Math.min(i * 0.02, 0.5)}s both` : "none",
                             }}
-                            onMouseEnter={e => e.currentTarget.style.background = "rgba(99,102,241,0.06)"}
-                            onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? "transparent" : "rgba(255,255,255,0.015)"}
+                            onMouseEnter={e => {
+                              e.currentTarget.style.background = "rgba(99,102,241,0.05)";
+                              e.currentTarget.style.transform = "scale(1.001)";
+                            }}
+                            onMouseLeave={e => {
+                              e.currentTarget.style.background = i % 2 === 0 ? "transparent" : "rgba(255,255,255,0.01)";
+                              e.currentTarget.style.transform = "scale(1)";
+                            }}
                           >
-                            <td style={tdStyle}>
-                              <span style={{ fontFamily: "'JetBrains Mono', monospace", color: r.isRegistered ? "#a5b4fc" : "#475569", fontSize: "0.8rem" }}>{r.rollNo}</span>
+                            <td style={{ padding: "0.65rem 1rem", borderBottom: "1px solid rgba(255,255,255,0.03)", color: "#334155", fontSize: "0.7rem", fontFamily: "'JetBrains Mono', monospace" }}>
+                              {i + 1}
                             </td>
-                            <td style={tdStyle}>
+                            <td style={{ padding: "0.65rem 1rem", borderBottom: "1px solid rgba(255,255,255,0.03)" }}>
                               <span style={{
-                                display: "inline-block",
-                                padding: "0.15rem 0.55rem",
+                                fontFamily: "'JetBrains Mono', monospace",
+                                color: r.isRegistered ? "#c7d2fe" : "#334155",
+                                fontSize: "0.82rem",
+                                fontWeight: r.isRegistered ? "600" : "400",
+                              }}>{r.rollNo}</span>
+                            </td>
+                            <td style={{ padding: "0.65rem 1rem", borderBottom: "1px solid rgba(255,255,255,0.03)" }}>
+                              <span style={{
+                                display: "inline-flex", alignItems: "center", gap: "0.35rem",
+                                padding: "0.2rem 0.65rem",
                                 borderRadius: "99px",
-                                fontSize: "0.65rem",
-                                fontWeight: "700",
-                                letterSpacing: "0.05em",
-                                background: statusColor(r.result) + "18",
+                                fontSize: "0.6rem", fontWeight: "700",
+                                letterSpacing: "0.06em",
+                                background: `${statusColor(r.result)}12`,
                                 color: statusColor(r.result),
-                                border: `1px solid ${statusColor(r.result)}33`,
+                                border: `1px solid ${statusColor(r.result)}25`,
                                 fontFamily: "'JetBrains Mono', monospace",
                               }}>
-                                {r.result || "—"}
+                                <span style={{ fontSize: "0.55rem" }}>{r.isRegistered ? "●" : "○"}</span>
+                                {r.result}
                               </span>
                             </td>
-                            <td style={tdStyle}>
+                            <td style={{ padding: "0.65rem 1rem", borderBottom: "1px solid rgba(255,255,255,0.03)" }}>
                               {r.isRegistered ? (
-                                <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
-                                  <a
-                                    href={`${BASE}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
+                                <div style={{ display: "flex", gap: "0.4rem" }}>
+                                  <a href={BASE} target="_blank" rel="noopener noreferrer"
                                     style={{
-                                      padding: "0.2rem 0.5rem",
-                                      background: "rgba(99,102,241,0.15)",
-                                      border: "1px solid rgba(99,102,241,0.3)",
-                                      borderRadius: "6px",
-                                      color: "#a5b4fc",
-                                      fontSize: "0.65rem",
-                                      textDecoration: "none",
+                                      padding: "0.25rem 0.6rem",
+                                      background: "rgba(99,102,241,0.1)",
+                                      border: "1px solid rgba(99,102,241,0.2)",
+                                      borderRadius: "8px", color: "#a5b4fc",
+                                      fontSize: "0.62rem", textDecoration: "none",
                                       fontFamily: "'JetBrains Mono', monospace",
-                                      whiteSpace: "nowrap",
+                                      fontWeight: 600, whiteSpace: "nowrap",
+                                      transition: "all 0.2s",
+                                      display: "inline-flex", alignItems: "center", gap: "0.25rem",
                                     }}
-                                  >Open Portal ↗</a>
+                                    onMouseEnter={e => { e.currentTarget.style.background = "rgba(99,102,241,0.2)"; e.currentTarget.style.borderColor = "rgba(99,102,241,0.4)"; }}
+                                    onMouseLeave={e => { e.currentTarget.style.background = "rgba(99,102,241,0.1)"; e.currentTarget.style.borderColor = "rgba(99,102,241,0.2)"; }}
+                                  >🌐 Portal</a>
                                   <button
                                     onClick={(e) => { e.stopPropagation(); fetchMarksheetPdf(r.rollNo); }}
                                     style={{
-                                      padding: "0.2rem 0.5rem",
-                                      background: "rgba(34,197,94,0.1)",
-                                      border: "1px solid rgba(34,197,94,0.25)",
-                                      borderRadius: "6px",
-                                      color: "#86efac",
-                                      fontSize: "0.65rem",
-                                      cursor: "pointer",
+                                      padding: "0.25rem 0.6rem",
+                                      background: "rgba(34,197,94,0.08)",
+                                      border: "1px solid rgba(34,197,94,0.18)",
+                                      borderRadius: "8px", color: "#86efac",
+                                      fontSize: "0.62rem", cursor: "pointer",
                                       fontFamily: "'JetBrains Mono', monospace",
-                                      whiteSpace: "nowrap",
+                                      fontWeight: 600, whiteSpace: "nowrap",
+                                      transition: "all 0.2s",
+                                      display: "inline-flex", alignItems: "center", gap: "0.25rem",
                                     }}
-                                  >{r.pdfUrl ? "View PDF ✓" : "Try PDF ↓"}</button>
+                                    onMouseEnter={e => { e.currentTarget.style.background = "rgba(34,197,94,0.18)"; e.currentTarget.style.borderColor = "rgba(34,197,94,0.35)"; }}
+                                    onMouseLeave={e => { e.currentTarget.style.background = "rgba(34,197,94,0.08)"; e.currentTarget.style.borderColor = "rgba(34,197,94,0.18)"; }}
+                                  >{r.pdfUrl ? "✅ PDF Ready" : "📄 Try PDF"}</button>
                                 </div>
                               ) : (
-                                <span style={{ color: "#475569", fontSize: "0.75rem" }}>—</span>
+                                <span style={{ color: "#1e293b", fontSize: "0.75rem" }}>—</span>
                               )}
                             </td>
                           </tr>
@@ -800,113 +1034,88 @@
                   </div>
                 </div>
 
-                {/* Expanded Marksheet View */}
+                {/* Expanded PDF Viewer */}
                 {expandedRow && (() => {
                   const r = results.find(x => x.rollNo === expandedRow);
-                  if (!r) return null;
-                  if (!r.pdfUrl && !r.rawHtml) return null;
-
+                  if (!r?.pdfUrl) return null;
                   return (
-                    <div className="fade-in" style={{
+                    <div style={{
                       marginTop: "1rem",
-                      background: "rgba(255,255,255,0.03)",
+                      background: "rgba(255,255,255,0.02)",
                       border: "1px solid rgba(99,102,241,0.2)",
-                      borderRadius: "16px",
+                      borderRadius: "20px",
                       overflow: "hidden",
+                      animation: "fadeInScale 0.3s ease-out",
+                      boxShadow: "0 4px 30px rgba(0,0,0,0.2)",
                     }}>
                       <div style={{
                         display: "flex", justifyContent: "space-between", alignItems: "center",
-                        padding: "0.75rem 1rem",
-                        background: "rgba(99,102,241,0.08)",
-                        borderBottom: "1px solid rgba(99,102,241,0.15)",
+                        padding: "0.8rem 1.2rem",
+                        background: "linear-gradient(135deg, rgba(99,102,241,0.08), rgba(139,92,246,0.05))",
+                        borderBottom: "1px solid rgba(99,102,241,0.1)",
                       }}>
-                        <span style={{ color: "#a5b4fc", fontWeight: "600", fontSize: "0.85rem" }}>
-                          📋 Marksheet — {r.rollNo} ({r.studentName})
+                        <span style={{ color: "#a5b4fc", fontWeight: "700", fontSize: "0.85rem" }}>
+                          📋 Marksheet — {r.rollNo}
                         </span>
                         <div style={{ display: "flex", gap: "0.5rem" }}>
-                          {r.pdfUrl && (
-                            <a href={r.pdfUrl} download={`Marksheet_${r.rollNo}.pdf`} style={{
-                              background: "rgba(34,197,94,0.15)", border: "1px solid rgba(34,197,94,0.3)",
-                              borderRadius: "8px", color: "#86efac", padding: "0.3rem 0.7rem",
-                              cursor: "pointer", fontSize: "0.75rem", textDecoration: "none",
-                            }}>↓ Download PDF</a>
-                          )}
+                          <a href={r.pdfUrl} download={`Marksheet_${r.rollNo}.pdf`} style={{
+                            background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.25)",
+                            borderRadius: "8px", color: "#86efac", padding: "0.35rem 0.8rem",
+                            fontSize: "0.72rem", textDecoration: "none", fontWeight: 600,
+                          }}>📥 Download</a>
                           <button onClick={() => setExpandedRow(null)} style={{
-                            background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)",
-                            borderRadius: "8px", color: "#fca5a5", padding: "0.3rem 0.7rem",
-                            cursor: "pointer", fontSize: "0.75rem",
-                          }}>✕ Close</button>
+                            background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.25)",
+                            borderRadius: "8px", color: "#fca5a5", padding: "0.35rem 0.8rem",
+                            cursor: "pointer", fontSize: "0.72rem", fontWeight: 600,
+                          }}>✕</button>
                         </div>
                       </div>
-                      {r.pdfUrl ? (
-                        <iframe
-                          src={r.pdfUrl}
-                          style={{ width: "100%", height: "70vh", border: "none", background: "#fff" }}
-                          title={`Marksheet ${r.rollNo}`}
-                        />
-                      ) : r.rawHtml ? (
-                        <div
-                          style={{ padding: "1rem", overflow: "auto", maxHeight: "500px", background: "#fff", color: "#000" }}
-                          dangerouslySetInnerHTML={{ __html: r.rawHtml }}
-                        />
-                      ) : null}
+                      <iframe src={r.pdfUrl}
+                        style={{ width: "100%", height: "70vh", border: "none", background: "#fff" }}
+                        title={`Marksheet ${r.rollNo}`} />
                     </div>
                   );
                 })()}
               </div>
             )}
 
-            {/* Empty State */}
+            {/* ── Empty State ── */}
             {!results.length && !loading && (
-              <div style={{ textAlign: "center", marginTop: "3rem", opacity: 0.4 }}>
-                <div style={{ fontSize: "2.5rem", marginBottom: "0.5rem" }}>📊</div>
-                <p style={{ fontSize: "0.85rem", color: "#64748b" }}>
-                  Select your exam details above and click "Fetch Results" to begin
+              <div style={{
+                textAlign: "center", marginTop: "3rem",
+                animation: "fadeInUp 0.6s ease-out 0.3s both",
+              }}>
+                <div style={{
+                  fontSize: "3.5rem", marginBottom: "0.8rem",
+                  animation: "float 4s ease-in-out infinite",
+                }}>📊</div>
+                <p style={{
+                  fontSize: "0.9rem", color: "#334155",
+                  fontWeight: 500, maxWidth: "300px", margin: "0 auto",
+                  lineHeight: 1.6,
+                }}>
+                  Select your exam details above and check roll numbers instantly
                 </p>
               </div>
             )}
 
-            <div style={{
-              textAlign: "center", marginTop: "3rem", color: "#334155",
-              fontSize: "0.7rem", fontFamily: "'JetBrains Mono', monospace",
+            {/* ── Footer ── */}
+            <footer style={{
+              textAlign: "center", marginTop: "3rem", paddingBottom: "2rem",
+              color: "#1e293b", fontSize: "0.65rem",
+              fontFamily: "'JetBrains Mono', monospace",
+              letterSpacing: "0.05em",
             }}>
-              Data fetched directly from rtmnuresults.uonex.in · For educational use only
-            </div>
+              Data from rtmnuresults.uonex.in · For educational use only
+              <br />
+              <span style={{ color: "#0f172a" }}>
+                Built by <a href="https://github.com/Yash-Gaikwad14" target="_blank" rel="noopener" style={{ color: "#1e293b", textDecoration: "none" }}>Yash Gaikwad</a>
+              </span>
+            </footer>
           </div>
         </div>
       );
     }
-
-    // ── Shared Styles ──
-    const labelStyle = {
-      display: "block",
-      marginBottom: "0.35rem",
-      fontSize: "0.68rem",
-      fontFamily: "'JetBrains Mono', monospace",
-      letterSpacing: "0.1em",
-      textTransform: "uppercase",
-      color: "#64748b",
-    };
-
-    const inputStyle = {
-      width: "100%",
-      padding: "0.65rem 0.85rem",
-      background: "rgba(255,255,255,0.05)",
-      border: "1px solid rgba(255,255,255,0.1)",
-      borderRadius: "10px",
-      color: "#e2e8f0",
-      fontSize: "0.85rem",
-      outline: "none",
-      boxSizing: "border-box",
-      fontFamily: "'Inter', sans-serif",
-      transition: "border-color 0.2s, background 0.2s",
-    };
-
-    const tdStyle = {
-      padding: "0.7rem 0.85rem",
-      borderBottom: "1px solid rgba(255,255,255,0.04)",
-      verticalAlign: "middle",
-    };
 
     const root = ReactDOM.createRoot(document.getElementById("root"));
     root.render(<RTMNUChecker />);
