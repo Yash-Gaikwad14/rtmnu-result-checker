@@ -372,6 +372,7 @@
       const [session, setSession] = useState("");
       const [faculty, setFaculty] = useState("");
       const [degree, setDegree] = useState("");
+      const [semesterFilter, setSemesterFilter] = useState("");
       const [course, setCourse] = useState("");
       const [rollStart, setRollStart] = useState("");
       const [rollEnd, setRollEnd] = useState("");
@@ -442,6 +443,11 @@
           .catch(() => setError("Failed to load courses"))
           .finally(() => setLoadingCourses(false));
       }, [degree]);
+
+      const filteredCourses = useMemo(() => {
+        if (!semesterFilter) return courses;
+        return courses.filter(c => c.label.toUpperCase().includes(semesterFilter));
+      }, [courses, semesterFilter]);
 
       useEffect(() => {
         if (!course || !department) { setRollNumbers([]); return; }
@@ -681,9 +687,25 @@
                   value={degree} onChange={e => setDegree(e.target.value)}
                   options={degrees} loading={loadingDegrees} disabled={!faculty} />
 
+                <SelectField id="semester-filter" label="Semester Filter" icon="🔍"
+                  value={semesterFilter} onChange={e => { setSemesterFilter(e.target.value); setCourse(""); }}
+                  options={[
+                    { value: "FIRST", label: "1st Semester" },
+                    { value: "SECOND", label: "2nd Semester" },
+                    { value: "THIRD", label: "3rd Semester" },
+                    { value: "FOURTH", label: "4th Semester" },
+                    { value: "FIFTH", label: "5th Semester" },
+                    { value: "SIXTH", label: "6th Semester" },
+                    { value: "SEVENTH", label: "7th Semester" },
+                    { value: "EIGHTH", label: "8th Semester" },
+                    { value: "NINTH", label: "9th Semester" },
+                    { value: "TENTH", label: "10th Semester" }
+                  ]}
+                  disabled={!degree} />
+
                 <SelectField id="course" label="Course *" icon="📚"
                   value={course} onChange={e => setCourse(e.target.value)}
-                  options={courses} loading={loadingCourses} disabled={!degree} />
+                  options={filteredCourses} loading={loadingCourses} disabled={!degree} />
 
                 <div>
                   <label style={{
