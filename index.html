@@ -307,10 +307,10 @@
     const CUSTOM_PROXY = ""; 
 
     const CORS_PROXIES = [
-      "https://cors.eu.org/",
-      "https://api.allorigins.win/raw?url=",
-      "https://corsproxy.io/?",
-      "https://api.codetabs.com/v1/proxy?quest=",
+      url => `https://cors.eu.org/${url}`,
+      url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+      url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+      url => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
     ];
 
     const proxyFetch = async (url, options = {}) => {
@@ -326,8 +326,8 @@
 
       // 2. Otherwise, fallback to the slow public proxies using Promise.any
       // This ensures we always get the fastest response and don't wait for slow proxies to timeout.
-      const fetchPromises = CORS_PROXIES.map(proxy =>
-        fetch(proxy + encodeURIComponent(url), {
+      const fetchPromises = CORS_PROXIES.map(proxyFn =>
+        fetch(proxyFn(url), {
           ...options,
           signal: AbortSignal.timeout(10000), // 10s max timeout per proxy
         }).then(res => {
