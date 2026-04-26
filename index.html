@@ -719,21 +719,31 @@
 
       const fetchMarksheetPdf = async (rollNo) => {
         setError("");
+        // Step 1: Immediately close modal to kill the previous iframe and its session
         setExpandedRow(null);
 
+        const timestamp = Date.now();
         const qs = new URLSearchParams({
-          rollno: rollNo, session, courseCode: course,
-          faculty, degree, department,
+          rollno: rollNo, 
+          session, 
+          courseCode: course,
+          faculty, 
+          degree, 
+          department,
+          _t: timestamp, // Aggressive cache-buster for mobile browsers
+          rand: Math.random().toString(36).substring(7)
         }).toString();
+        
         const directUrl = `${BASE}/GetMarkSheet_report?${qs}`;
 
-        // Small delay to let React unmount the previous iframe completely
+        // Step 2: Longer delay (150ms) to ensure the mobile browser has fully 
+        // destroyed the previous iframe context before creating a new one.
         setTimeout(() => {
           setResults(prev => prev.map(r =>
-            r.rollNo === rollNo ? { ...r, pdfUrl: directUrl, pdfHtml: null, remarks: "Viewing" } : r
+            r.rollNo === rollNo ? { ...r, pdfUrl: directUrl, pdfHtml: null, lastViewed: timestamp } : r
           ));
           setExpandedRow(rollNo);
-        }, 50);
+        }, 150);
       };
 
       const handleStop = () => { abortRef.current = true; };
@@ -1415,9 +1425,13 @@
                             }}>✕ Close</button>
                           </div>
                         </div>
-                        <iframe key={r.pdfUrl} src={r.pdfUrl}
+                        <iframe 
+                          key={`${r.rollNo}_${r.lastViewed}`} 
+                          src={r.pdfUrl}
                           style={{ width: "100%", flexGrow: 1, border: "none", background: "#fff" }}
-                          title={`Marksheet ${r.rollNo}`} />
+                          title={`Marksheet ${r.rollNo}`}
+                          loading="lazy"
+                        />
                       </div>
                     </div>
                   );
