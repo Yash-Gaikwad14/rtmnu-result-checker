@@ -720,22 +720,22 @@
         const qs = new URLSearchParams({
           rollno: rollNo, session, courseCode: course,
           faculty, degree, department,
-          _t: Date.now() // Cache-buster to avoid stale results
+          _t: Date.now() // Cache-buster to avoid stale/wrong results
         }).toString();
         const pdfUrl = `${BASE}/GetMarkSheet_report?${qs}`;
 
-        if (isMobile) {
-          // On mobile, open in a new tab to avoid iframe session conflicts.
-          // The RTMNU server uses ASP.NET server sessions — iframes on mobile share
-          // cookies and cause the wrong student's result to appear.
-          window.open(pdfUrl, '_blank');
-        } else {
-          // On desktop, use the in-page modal viewer
+        // Step 1: Close any existing modal first to fully unmount the old iframe.
+        // This prevents the browser from reusing a cached iframe showing the wrong student.
+        setExpandedRow(null);
+
+        // Step 2: After React unmounts the old iframe, set the new data and reopen.
+        // Using setTimeout(0) ensures React has time to process the unmount.
+        setTimeout(() => {
           setResults(prev => prev.map(r =>
             r.rollNo === rollNo ? { ...r, pdfUrl, remarks: "Viewing in Modal" } : r
           ));
           setExpandedRow(rollNo);
-        }
+        }, 50);
       };
 
       const handleStop = () => { abortRef.current = true; };
@@ -1377,45 +1377,49 @@
                       zIndex: 1000,
                       display: "flex", alignItems: "center", justifyContent: "center",
                       animation: "fadeInScale 0.2s ease-out",
-                      padding: "2rem"
-                    }}>
+                      padding: isMobile ? "0" : "2rem"
+                    }} onClick={() => setExpandedRow(null)}>
                       <div style={{
-                        width: "100%", maxWidth: "1000px", height: "100%",
+                        width: "100%", maxWidth: isMobile ? "100%" : "1000px",
+                        height: "100%",
                         background: "rgba(15, 23, 42, 0.95)",
-                        border: "1px solid rgba(99,102,241,0.3)",
-                        borderRadius: "20px",
+                        border: isMobile ? "none" : "1px solid rgba(99,102,241,0.3)",
+                        borderRadius: isMobile ? "0" : "20px",
                         overflow: "hidden",
                         display: "flex", flexDirection: "column",
                         boxShadow: "0 20px 60px rgba(0,0,0,0.5)",
-                      }}>
+                      }} onClick={e => e.stopPropagation()}>
                         <div style={{
                           display: "flex", justifyContent: "space-between", alignItems: "center",
-                          padding: "1rem 1.5rem",
+                          padding: isMobile ? "0.7rem 1rem" : "1rem 1.5rem",
                           background: "linear-gradient(135deg, rgba(99,102,241,0.1), rgba(139,92,246,0.1))",
                           borderBottom: "1px solid rgba(99,102,241,0.15)",
+                          flexShrink: 0,
                         }}>
-                          <span style={{ color: "#a5b4fc", fontWeight: "700", fontSize: "1rem" }}>
-                            📋 Marksheet — {r.rollNo}
+                          <span style={{ color: "#a5b4fc", fontWeight: "700", fontSize: isMobile ? "0.85rem" : "1rem" }}>
+                            📋 {r.rollNo}
                           </span>
-                          <div style={{ display: "flex", gap: "0.75rem" }}>
+                          <div style={{ display: "flex", gap: "0.5rem" }}>
                             <a href={r.pdfUrl} download={`Marksheet_${r.rollNo}.pdf`} style={{
                               background: "rgba(34,197,94,0.15)", border: "1px solid rgba(34,197,94,0.3)",
-                              borderRadius: "10px", color: "#86efac", padding: "0.5rem 1rem",
-                              fontSize: "0.8rem", textDecoration: "none", fontWeight: 600,
+                              borderRadius: "10px", color: "#86efac",
+                              padding: isMobile ? "0.45rem 0.7rem" : "0.5rem 1rem",
+                              fontSize: isMobile ? "0.7rem" : "0.8rem", textDecoration: "none", fontWeight: 600,
                               transition: "all 0.2s",
                             }}
                               onMouseEnter={e => e.currentTarget.style.background = "rgba(34,197,94,0.25)"}
                               onMouseLeave={e => e.currentTarget.style.background = "rgba(34,197,94,0.15)"}
-                            >📥 Download PDF</a>
+                            >📥 Save</a>
                             <button onClick={() => setExpandedRow(null)} style={{
                               background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)",
-                              borderRadius: "10px", color: "#fca5a5", padding: "0.5rem 1rem",
-                              cursor: "pointer", fontSize: "0.8rem", fontWeight: 600,
+                              borderRadius: "10px", color: "#fca5a5",
+                              padding: isMobile ? "0.45rem 0.7rem" : "0.5rem 1rem",
+                              cursor: "pointer", fontSize: isMobile ? "0.7rem" : "0.8rem", fontWeight: 600,
                               transition: "all 0.2s",
                             }}
                               onMouseEnter={e => e.currentTarget.style.background = "rgba(239,68,68,0.25)"}
                               onMouseLeave={e => e.currentTarget.style.background = "rgba(239,68,68,0.15)"}
-                            >✕ Close Viewer</button>
+                            >✕ Close</button>
                           </div>
                         </div>
                         <iframe key={r.pdfUrl} src={r.pdfUrl}
