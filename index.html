@@ -711,23 +711,31 @@
         setTimeout(() => setShowResults(true), 100);
       };
 
+      // Detect mobile devices reliably
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) 
+        || (window.innerWidth <= 768);
+
       const fetchMarksheetPdf = async (rollNo) => {
         setError("");
-        // Since CORS proxies strip the session cookie, fetching the PDF directly in JS fails with "requires browser session"
-        // Instead, we construct the direct URL to the RTMNU API. When we put this URL in an <iframe>,
-        // the browser will automatically send the user's cookies to the RTMNU server, allowing the PDF to generate.
         const qs = new URLSearchParams({
           rollno: rollNo, session, courseCode: course,
           faculty, degree, department,
-          _t: Date.now() // Mobile Safari cache-buster
+          _t: Date.now() // Cache-buster to avoid stale results
         }).toString();
         const pdfUrl = `${BASE}/GetMarkSheet_report?${qs}`;
 
-        // Just open the modal immediately with the direct URL
-        setResults(prev => prev.map(r =>
-          r.rollNo === rollNo ? { ...r, pdfUrl, remarks: "Viewing in Modal" } : r
-        ));
-        setExpandedRow(rollNo);
+        if (isMobile) {
+          // On mobile, open in a new tab to avoid iframe session conflicts.
+          // The RTMNU server uses ASP.NET server sessions — iframes on mobile share
+          // cookies and cause the wrong student's result to appear.
+          window.open(pdfUrl, '_blank');
+        } else {
+          // On desktop, use the in-page modal viewer
+          setResults(prev => prev.map(r =>
+            r.rollNo === rollNo ? { ...r, pdfUrl, remarks: "Viewing in Modal" } : r
+          ));
+          setExpandedRow(rollNo);
+        }
       };
 
       const handleStop = () => { abortRef.current = true; };
@@ -1311,18 +1319,19 @@
                             </td>
                             <td style={{ padding: "0.65rem 1rem", borderBottom: "1px solid rgba(255,255,255,0.03)" }}>
                               {r.isRegistered ? (
-                                <div style={{ display: "flex", gap: "0.4rem" }}>
+                                <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
                                   <a href={BASE} target="_blank" rel="noopener noreferrer"
                                     style={{
-                                      padding: "0.25rem 0.6rem",
+                                      padding: isMobile ? "0.45rem 0.8rem" : "0.25rem 0.6rem",
                                       background: "rgba(99,102,241,0.1)",
                                       border: "1px solid rgba(99,102,241,0.2)",
                                       borderRadius: "8px", color: "#a5b4fc",
-                                      fontSize: "0.62rem", textDecoration: "none",
+                                      fontSize: isMobile ? "0.72rem" : "0.62rem", textDecoration: "none",
                                       fontFamily: "'JetBrains Mono', monospace",
                                       fontWeight: 600, whiteSpace: "nowrap",
                                       transition: "all 0.2s",
                                       display: "inline-flex", alignItems: "center", gap: "0.25rem",
+                                      minHeight: isMobile ? "36px" : "auto",
                                     }}
                                     onMouseEnter={e => { e.currentTarget.style.background = "rgba(99,102,241,0.2)"; e.currentTarget.style.borderColor = "rgba(99,102,241,0.4)"; }}
                                     onMouseLeave={e => { e.currentTarget.style.background = "rgba(99,102,241,0.1)"; e.currentTarget.style.borderColor = "rgba(99,102,241,0.2)"; }}
@@ -1330,19 +1339,20 @@
                                   <button
                                     onClick={(e) => { e.stopPropagation(); fetchMarksheetPdf(r.rollNo); }}
                                     style={{
-                                      padding: "0.25rem 0.6rem",
+                                      padding: isMobile ? "0.45rem 0.8rem" : "0.25rem 0.6rem",
                                       background: "rgba(34,197,94,0.08)",
                                       border: "1px solid rgba(34,197,94,0.18)",
                                       borderRadius: "8px", color: "#86efac",
-                                      fontSize: "0.62rem", cursor: "pointer",
+                                      fontSize: isMobile ? "0.72rem" : "0.62rem", cursor: "pointer",
                                       fontFamily: "'JetBrains Mono', monospace",
                                       fontWeight: 600, whiteSpace: "nowrap",
                                       transition: "all 0.2s",
                                       display: "inline-flex", alignItems: "center", gap: "0.25rem",
+                                      minHeight: isMobile ? "36px" : "auto",
                                     }}
                                     onMouseEnter={e => { e.currentTarget.style.background = "rgba(34,197,94,0.18)"; e.currentTarget.style.borderColor = "rgba(34,197,94,0.35)"; }}
                                     onMouseLeave={e => { e.currentTarget.style.background = "rgba(34,197,94,0.08)"; e.currentTarget.style.borderColor = "rgba(34,197,94,0.18)"; }}
-                                  >{r.pdfUrl ? "✅ PDF Ready" : "📄 Try PDF"}</button>
+                                  >{r.pdfUrl ? "✅ PDF Ready" : (isMobile ? "📄 View Result" : "📄 Try PDF")}</button>
                                 </div>
                               ) : (
                                 <span style={{ color: "#1e293b", fontSize: "0.75rem" }}>—</span>
