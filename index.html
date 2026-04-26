@@ -532,6 +532,7 @@
       const [course, setCourse] = useState("");
       const [rollStart, setRollStart] = useState("");
       const [rollEnd, setRollEnd] = useState("");
+      const [isSingleMode, setIsSingleMode] = useState(false);
 
       const [sessions, setSessions] = useState([]);
       const [faculties, setFaculties] = useState([]);
@@ -643,7 +644,8 @@
         if (!faculty) return "Please select Faculty.";
         if (!degree) return "Please select Degree.";
         if (!course) return "Please select Course.";
-        if (!rollStart || !rollEnd) return "Please enter roll number range.";
+        if (!rollStart) return "Please enter a roll number.";
+        if (!isSingleMode && !rollEnd) return "Please enter roll number range.";
         return null;
       };
 
@@ -659,7 +661,7 @@
         setShowResults(false);
         abortRef.current = false;
 
-        const s = parseInt(rollStart), e = parseInt(rollEnd);
+        const s = parseInt(rollStart), e = isSingleMode ? parseInt(rollStart) : parseInt(rollEnd);
         const registeredSet = new Set(rollNumbers.map(r => String(r)));
 
         // Only include registered roll numbers within the range
@@ -919,14 +921,30 @@
                   value={course} onChange={e => setCourse(e.target.value)}
                   options={filteredCourses} loading={loadingCourses} disabled={!degree} />
 
-                <div>
+                <div style={{ gridColumn: "1 / -1", display: "flex", justifyContent: "flex-end", marginBottom: "-0.8rem", marginTop: "0.5rem" }}>
+                  <button onClick={() => setIsSingleMode(!isSingleMode)} style={{
+                    background: isSingleMode ? "rgba(99,102,241,0.15)" : "rgba(255,255,255,0.05)",
+                    border: isSingleMode ? "1px solid rgba(99,102,241,0.3)" : "1px solid rgba(255,255,255,0.1)",
+                    borderRadius: "8px",
+                    padding: "0.4rem 0.8rem",
+                    color: isSingleMode ? "#a5b4fc" : "#94a3b8",
+                    fontSize: "0.75rem",
+                    fontFamily: "'Inter', sans-serif",
+                    cursor: "pointer",
+                    transition: "all 0.2s"
+                  }}>
+                    {isSingleMode ? "⇌ Switch to Bulk Range" : "👤 Check Single Roll No."}
+                  </button>
+                </div>
+
+                <div style={{ gridColumn: isSingleMode ? "1 / -1" : "auto" }}>
                   <label style={{
                     display: "flex", alignItems: "center", gap: "0.4rem",
                     marginBottom: "0.4rem", fontSize: "0.65rem",
                     fontFamily: "'JetBrains Mono', monospace",
                     letterSpacing: "0.12em", textTransform: "uppercase",
                     color: "#64748b", fontWeight: 500,
-                  }}>🔢 Roll From *</label>
+                  }}>🔢 {isSingleMode ? "Roll Number *" : "Roll From *"}</label>
                   <div style={{ position: "relative" }}>
                     <input id="roll-start" value={rollStart}
                       onChange={e => setRollStart(e.target.value)}
@@ -945,28 +963,30 @@
                   </div>
                 </div>
 
-                <div>
-                  <label style={{
-                    display: "flex", alignItems: "center", gap: "0.4rem",
-                    marginBottom: "0.4rem", fontSize: "0.65rem",
-                    fontFamily: "'JetBrains Mono', monospace",
-                    letterSpacing: "0.12em", textTransform: "uppercase",
-                    color: "#64748b", fontWeight: 500,
-                  }}>🔢 Roll To *</label>
-                  <input id="roll-end" value={rollEnd}
-                    onChange={e => setRollEnd(e.target.value)}
-                    placeholder={loadingRolls ? "Loading..." : "e.g. 110150"}
-                    disabled={loadingRolls}
-                    style={{
-                      width: "100%", padding: "0.7rem 0.9rem",
-                      background: "rgba(255,255,255,0.04)",
-                      border: "1px solid rgba(255,255,255,0.08)",
-                      borderRadius: "12px", color: "#e2e8f0",
-                      fontSize: "0.85rem", outline: "none",
+                {!isSingleMode && (
+                  <div>
+                    <label style={{
+                      display: "flex", alignItems: "center", gap: "0.4rem",
+                      marginBottom: "0.4rem", fontSize: "0.65rem",
                       fontFamily: "'JetBrains Mono', monospace",
-                      transition: "all 0.25s",
-                    }} />
-                </div>
+                      letterSpacing: "0.12em", textTransform: "uppercase",
+                      color: "#64748b", fontWeight: 500,
+                    }}>🔢 Roll To *</label>
+                    <input id="roll-end" value={rollEnd}
+                      onChange={e => setRollEnd(e.target.value)}
+                      placeholder={loadingRolls ? "Loading..." : "e.g. 110150"}
+                      disabled={loadingRolls}
+                      style={{
+                        width: "100%", padding: "0.7rem 0.9rem",
+                        background: "rgba(255,255,255,0.04)",
+                        border: "1px solid rgba(255,255,255,0.08)",
+                        borderRadius: "12px", color: "#e2e8f0",
+                        fontSize: "0.85rem", outline: "none",
+                        fontFamily: "'JetBrains Mono', monospace",
+                        transition: "all 0.25s",
+                      }} />
+                  </div>
+                )}
               </div>
 
               {/* Roll info banner */}
