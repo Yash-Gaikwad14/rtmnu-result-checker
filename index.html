@@ -1,22 +1,32 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>RTMNU Bulk Result Checker</title>
   <meta name="description" content="Bulk result checker for Rashtrasant Tukadoji Maharaj Nagpur University (RTMNU)" />
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="icon"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <style>
-    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    *,
+    *::before,
+    *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
     :root {
       --bg-primary: #06080f;
-      --bg-card: rgba(255,255,255,0.025);
-      --border: rgba(255,255,255,0.06);
+      --bg-card: rgba(255, 255, 255, 0.025);
+      --border: rgba(255, 255, 255, 0.06);
       --accent: #6366f1;
       --accent2: #8b5cf6;
       --accent3: #38bdf8;
@@ -28,7 +38,9 @@
       --text-dimmer: #334155;
     }
 
-    html { scroll-behavior: smooth; }
+    html {
+      scroll-behavior: smooth;
+    }
 
     body {
       background: var(--bg-primary);
@@ -38,8 +50,14 @@
       min-height: 100vh;
     }
 
-    ::-webkit-scrollbar { width: 5px; }
-    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar {
+      width: 5px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
     ::-webkit-scrollbar-thumb {
       background: linear-gradient(180deg, var(--accent), var(--accent2));
       border-radius: 99px;
@@ -47,60 +65,169 @@
 
     /* ── Animations ── */
     @keyframes fadeInUp {
-      from { opacity: 0; transform: translateY(20px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    @keyframes fadeInScale {
-      from { opacity: 0; transform: scale(0.95); }
-      to { opacity: 1; transform: scale(1); }
-    }
-    @keyframes slideInLeft {
-      from { opacity: 0; transform: translateX(-20px); }
-      to { opacity: 1; transform: translateX(0); }
-    }
-    @keyframes shimmer {
-      0% { background-position: -200% 0; }
-      100% { background-position: 200% 0; }
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    @keyframes glow {
-      0%, 100% { box-shadow: 0 0 20px rgba(99,102,241,0.15); }
-      50% { box-shadow: 0 0 40px rgba(99,102,241,0.3); }
-    }
-    @keyframes float {
-      0%, 100% { transform: translateY(0px) rotate(0deg); }
-      33% { transform: translateY(-8px) rotate(1deg); }
-      66% { transform: translateY(4px) rotate(-1deg); }
-    }
-    @keyframes gradientMove {
-      0% { background-position: 0% 50%; }
-      50% { background-position: 100% 50%; }
-      100% { background-position: 0% 50%; }
-    }
-    @keyframes borderGlow {
-      0%, 100% { border-color: rgba(99,102,241,0.2); }
-      50% { border-color: rgba(99,102,241,0.5); }
-    }
-    @keyframes particleFloat {
-      0% { transform: translateY(100vh) scale(0); opacity: 0; }
-      10% { opacity: 1; }
-      90% { opacity: 1; }
-      100% { transform: translateY(-10vh) scale(1); opacity: 0; }
-    }
-    @keyframes countUp {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    @keyframes ripple {
-      to { transform: scale(4); opacity: 0; }
-    }
-    @keyframes rowSlideIn {
-      from { opacity: 0; transform: translateX(-8px); }
-      to { opacity: 1; transform: translateX(0); }
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
 
-    .fade-in-up { animation: fadeInUp 0.5s ease-out forwards; }
-    .fade-in-scale { animation: fadeInScale 0.4s ease-out forwards; }
+    @keyframes fadeInScale {
+      from {
+        opacity: 0;
+        transform: scale(0.95);
+      }
+
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    @keyframes slideInLeft {
+      from {
+        opacity: 0;
+        transform: translateX(-20px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    @keyframes shimmer {
+      0% {
+        background-position: -200% 0;
+      }
+
+      100% {
+        background-position: 200% 0;
+      }
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    @keyframes glow {
+
+      0%,
+      100% {
+        box-shadow: 0 0 20px rgba(99, 102, 241, 0.15);
+      }
+
+      50% {
+        box-shadow: 0 0 40px rgba(99, 102, 241, 0.3);
+      }
+    }
+
+    @keyframes float {
+
+      0%,
+      100% {
+        transform: translateY(0px) rotate(0deg);
+      }
+
+      33% {
+        transform: translateY(-8px) rotate(1deg);
+      }
+
+      66% {
+        transform: translateY(4px) rotate(-1deg);
+      }
+    }
+
+    @keyframes gradientMove {
+      0% {
+        background-position: 0% 50%;
+      }
+
+      50% {
+        background-position: 100% 50%;
+      }
+
+      100% {
+        background-position: 0% 50%;
+      }
+    }
+
+    @keyframes borderGlow {
+
+      0%,
+      100% {
+        border-color: rgba(99, 102, 241, 0.2);
+      }
+
+      50% {
+        border-color: rgba(99, 102, 241, 0.5);
+      }
+    }
+
+    @keyframes particleFloat {
+      0% {
+        transform: translateY(100vh) scale(0);
+        opacity: 0;
+      }
+
+      10% {
+        opacity: 1;
+      }
+
+      90% {
+        opacity: 1;
+      }
+
+      100% {
+        transform: translateY(-10vh) scale(1);
+        opacity: 0;
+      }
+    }
+
+    @keyframes countUp {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes ripple {
+      to {
+        transform: scale(4);
+        opacity: 0;
+      }
+    }
+
+    @keyframes rowSlideIn {
+      from {
+        opacity: 0;
+        transform: translateX(-8px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    .fade-in-up {
+      animation: fadeInUp 0.5s ease-out forwards;
+    }
+
+    .fade-in-scale {
+      animation: fadeInScale 0.4s ease-out forwards;
+    }
 
     /* ── Particle Background ── */
     .particles {
@@ -110,6 +237,7 @@
       pointer-events: none;
       z-index: 0;
     }
+
     .particle {
       position: absolute;
       width: 3px;
@@ -127,9 +255,9 @@
       pointer-events: none;
       z-index: 0;
       background:
-        radial-gradient(ellipse 60% 50% at 10% 20%, rgba(99,102,241,0.08) 0%, transparent 60%),
-        radial-gradient(ellipse 50% 60% at 80% 70%, rgba(139,92,246,0.06) 0%, transparent 60%),
-        radial-gradient(ellipse 40% 40% at 50% 50%, rgba(56,189,248,0.04) 0%, transparent 60%);
+        radial-gradient(ellipse 60% 50% at 10% 20%, rgba(99, 102, 241, 0.08) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 60% at 80% 70%, rgba(139, 92, 246, 0.06) 0%, transparent 60%),
+        radial-gradient(ellipse 40% 40% at 50% 50%, rgba(56, 189, 248, 0.04) 0%, transparent 60%);
     }
 
     select option {
@@ -138,9 +266,10 @@
     }
 
     /* Focus ring for inputs */
-    select:focus, input:focus {
+    select:focus,
+    input:focus {
       border-color: var(--accent) !important;
-      box-shadow: 0 0 0 3px rgba(99,102,241,0.15) !important;
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15) !important;
     }
 
     /* Button ripple */
@@ -148,19 +277,22 @@
       position: relative;
       overflow: hidden;
     }
+
     .btn-ripple::after {
       content: '';
       position: absolute;
       inset: 0;
-      background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%);
+      background: radial-gradient(circle, rgba(255, 255, 255, 0.2) 0%, transparent 70%);
       transform: scale(0);
       opacity: 0;
     }
+
     .btn-ripple:active::after {
       animation: ripple 0.5s ease-out;
     }
   </style>
 </head>
+
 <body>
   <div id="root"></div>
 
@@ -169,38 +301,46 @@
 
     const BASE = "https://rtmnuresults.uonex.in";
     const CORS_PROXIES = [
+      "https://cors.eu.org/",
       "https://api.allorigins.win/raw?url=",
       "https://corsproxy.io/?",
       "https://api.codetabs.com/v1/proxy?quest=",
     ];
 
-    let currentProxyIndex = 0;
-
     const proxyFetch = async (url, options = {}) => {
-      for (let i = 0; i < CORS_PROXIES.length; i++) {
-        const proxyIdx = (currentProxyIndex + i) % CORS_PROXIES.length;
-        const proxy = CORS_PROXIES[proxyIdx];
-        try {
-          const res = await fetch(proxy + encodeURIComponent(url), {
-            ...options,
-            signal: AbortSignal.timeout(15000),
-          });
-          if (res.ok) {
-            currentProxyIndex = proxyIdx;
-            return res;
-          }
-        } catch (e) {
-          continue;
-        }
+      // Use Promise.any to fetch from all proxies simultaneously.
+      // This ensures we always get the fastest response and don't wait for slow proxies to timeout.
+      const fetchPromises = CORS_PROXIES.map(proxy =>
+        fetch(proxy + encodeURIComponent(url), {
+          ...options,
+          signal: AbortSignal.timeout(10000), // 10s max timeout per proxy
+        }).then(res => {
+          if (res.ok) return res;
+          throw new Error('Proxy returned non-ok status');
+        })
+      );
+
+      try {
+        return await Promise.any(fetchPromises);
+      } catch (e) {
+        throw new Error("All CORS proxies failed. Try again later.");
       }
-      throw new Error("All CORS proxies failed. Try again later.");
     };
 
     const fetchJSON = async (path, params = {}) => {
       const qs = new URLSearchParams(params).toString();
       const url = `${BASE}${path}${qs ? '?' + qs : ''}`;
+      const cacheKey = `rtmnu_${url}`;
+
+      const cached = sessionStorage.getItem(cacheKey);
+      if (cached) {
+        try { return JSON.parse(cached); } catch (e) { }
+      }
+
       const res = await proxyFetch(url);
-      return res.json();
+      const data = await res.json();
+      sessionStorage.setItem(cacheKey, JSON.stringify(data));
+      return data;
     };
 
     const fetchRaw = async (path, params = {}) => {
@@ -338,16 +478,16 @@
         position: "relative",
         overflow: "hidden",
       }}
-      onMouseEnter={e => {
-        e.currentTarget.style.transform = "translateY(-2px)";
-        e.currentTarget.style.borderColor = color + "40";
-        e.currentTarget.style.boxShadow = `0 8px 24px ${color}15`;
-      }}
-      onMouseLeave={e => {
-        e.currentTarget.style.transform = "translateY(0)";
-        e.currentTarget.style.borderColor = color + "20";
-        e.currentTarget.style.boxShadow = "none";
-      }}>
+        onMouseEnter={e => {
+          e.currentTarget.style.transform = "translateY(-2px)";
+          e.currentTarget.style.borderColor = color + "40";
+          e.currentTarget.style.boxShadow = `0 8px 24px ${color}15`;
+        }}
+        onMouseLeave={e => {
+          e.currentTarget.style.transform = "translateY(0)";
+          e.currentTarget.style.borderColor = color + "20";
+          e.currentTarget.style.boxShadow = "none";
+        }}>
         <div style={{ fontSize: "1.6rem", marginBottom: "0.3rem" }}>{icon}</div>
         <div style={{
           fontSize: "1.8rem", fontWeight: "800", color,
@@ -401,6 +541,13 @@
       const [gazetteText, setGazetteText] = useState("");
       const abortRef = useRef(false);
 
+      // ── Prefetch Core Data ──
+      useEffect(() => {
+        // Silently pre-fetch common data on mount so it's instantly available from cache
+        fetchJSON("/Auth/GetDegreesBySession", { department: "U" }).catch(() => { });
+        fetchJSON("/Auth/GetDegreesBySession", { department: "A" }).catch(() => { });
+      }, []);
+
       // ── Cascading Dropdown Loaders ──
       useEffect(() => {
         if (!department) { setSessions([]); return; }
@@ -408,7 +555,10 @@
         setSession(""); setFaculty(""); setDegree(""); setCourse("");
         setFaculties([]); setDegrees([]); setCourses([]); setRollNumbers([]);
         fetchJSON("/Auth/GetDegreesBySession", { department })
-          .then(data => setSessions(data.map(d => ({ value: d.sessionYear || d.SessionYear, label: d.sessionYear || d.SessionYear }))))
+          .then(data => {
+            const uniqueSessions = [...new Set(data.map(d => d.sessionYear || d.SessionYear))].filter(Boolean);
+            setSessions(uniqueSessions.map(s => ({ value: s, label: s })));
+          })
           .catch(() => setError("Failed to load sessions"))
           .finally(() => setLoadingSessions(false));
       }, [department]);
@@ -430,7 +580,10 @@
         setDegree(""); setCourse("");
         setCourses([]); setRollNumbers([]);
         fetchJSON("/Auth/GetDegreesByFaculty", { faculty, department })
-          .then(data => setDegrees(data.map(d => ({ value: d.degree, label: d.degree }))))
+          .then(data => {
+            const uniqueDegrees = [...new Set(data.map(d => d.degree))].filter(Boolean);
+            setDegrees(uniqueDegrees.map(deg => ({ value: deg, label: deg })));
+          })
           .catch(() => setError("Failed to load degrees"))
           .finally(() => setLoadingDegrees(false));
       }, [faculty]);
@@ -594,7 +747,7 @@
           else if (l.includes("FAIL")) currentGroup = "FAIL";
           else if (l.includes("ABSENT")) currentGroup = "ABSENT";
           else if (l.includes("W/D")) currentGroup = "W/D";
-          
+
           const rollLength = String(results[0]?.rollNo || "").length || 6;
           const regex = new RegExp("\\b\\d{" + rollLength + "}\\b", "g");
           const matches = line.match(regex);
@@ -602,12 +755,12 @@
             for (let m of matches) statuses.set(m, currentGroup);
           }
         }
-        
+
         let updated = 0;
         setResults(prev => prev.map(r => {
           if (statuses.has(r.rollNo)) {
-             updated++;
-             return { ...r, result: statuses.get(r.rollNo) };
+            updated++;
+            return { ...r, result: statuses.get(r.rollNo) };
           }
           return r;
         }));
@@ -686,7 +839,7 @@
                 display: "flex", justifyContent: "center", gap: "0.4rem",
                 marginTop: "1.2rem",
               }}>
-                {[0,1,2,3,4].map(i => (
+                {[0, 1, 2, 3, 4].map(i => (
                   <div key={i} style={{
                     width: i < formSteps ? "24px" : "8px",
                     height: "8px",
@@ -869,8 +1022,8 @@
                     cursor: "pointer", fontFamily: "'Inter', sans-serif",
                     transition: "all 0.2s",
                   }}
-                  onMouseEnter={e => e.currentTarget.style.background = "rgba(239,68,68,0.2)"}
-                  onMouseLeave={e => e.currentTarget.style.background = "rgba(239,68,68,0.1)"}
+                    onMouseEnter={e => e.currentTarget.style.background = "rgba(239,68,68,0.2)"}
+                    onMouseLeave={e => e.currentTarget.style.background = "rgba(239,68,68,0.1)"}
                   >■ Stop</button>
                 )}
 
@@ -885,8 +1038,8 @@
                     transition: "all 0.2s",
                     display: "flex", alignItems: "center", gap: "0.4rem",
                   }}
-                  onMouseEnter={e => e.currentTarget.style.background = "rgba(34,197,94,0.15)"}
-                  onMouseLeave={e => e.currentTarget.style.background = "rgba(34,197,94,0.08)"}
+                    onMouseEnter={e => e.currentTarget.style.background = "rgba(34,197,94,0.15)"}
+                    onMouseLeave={e => e.currentTarget.style.background = "rgba(34,197,94,0.08)"}
                   >📥 Export CSV</button>
                 )}
 
@@ -905,7 +1058,7 @@
                       onMouseEnter={e => e.currentTarget.style.background = "rgba(56,189,248,0.2)"}
                       onMouseLeave={e => e.currentTarget.style.background = "rgba(56,189,248,0.1)"}
                     >📰 View Gazette</a>
-                    
+
                     <button onClick={() => setPasteMode(!pasteMode)} style={{
                       padding: "0.85rem 1.5rem",
                       background: pasteMode ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.05)",
@@ -915,8 +1068,8 @@
                       cursor: "pointer", fontFamily: "'Inter', sans-serif",
                       transition: "all 0.2s", display: "flex", alignItems: "center", gap: "0.4rem",
                     }}
-                    onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.15)"}
-                    onMouseLeave={e => e.currentTarget.style.background = pasteMode ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.05)"}
+                      onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.15)"}
+                      onMouseLeave={e => e.currentTarget.style.background = pasteMode ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.05)"}
                     >✨ Auto-Grade via Gazette</button>
                   </div>
                 )}
@@ -935,8 +1088,8 @@
                     <span>✨</span> Auto-Assign Pass/Fail
                   </h3>
                   <p style={{ color: "#94a3b8", fontSize: "0.75rem", marginBottom: "1rem", lineHeight: 1.5 }}>
-                    1. Click <b>View Gazette</b> to open the official summary.<br/>
-                    2. Press <code>Ctrl+A</code> and <code>Ctrl+C</code> anywhere on that page.<br/>
+                    1. Click <b>View Gazette</b> to open the official summary.<br />
+                    2. Press <code>Ctrl+A</code> and <code>Ctrl+C</code> anywhere on that page.<br />
                     3. Paste the text below and click <b>Sync Marks</b>. Our tool will instantly match Pass/Fail to every student locally in 5 milliseconds.
                   </p>
                   <textarea
@@ -1204,8 +1357,8 @@
                               fontSize: "0.8rem", textDecoration: "none", fontWeight: 600,
                               transition: "all 0.2s",
                             }}
-                            onMouseEnter={e => e.currentTarget.style.background = "rgba(34,197,94,0.25)"}
-                            onMouseLeave={e => e.currentTarget.style.background = "rgba(34,197,94,0.15)"}
+                              onMouseEnter={e => e.currentTarget.style.background = "rgba(34,197,94,0.25)"}
+                              onMouseLeave={e => e.currentTarget.style.background = "rgba(34,197,94,0.15)"}
                             >📥 Download PDF</a>
                             <button onClick={() => setExpandedRow(null)} style={{
                               background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)",
@@ -1213,8 +1366,8 @@
                               cursor: "pointer", fontSize: "0.8rem", fontWeight: 600,
                               transition: "all 0.2s",
                             }}
-                            onMouseEnter={e => e.currentTarget.style.background = "rgba(239,68,68,0.25)"}
-                            onMouseLeave={e => e.currentTarget.style.background = "rgba(239,68,68,0.15)"}
+                              onMouseEnter={e => e.currentTarget.style.background = "rgba(239,68,68,0.25)"}
+                              onMouseLeave={e => e.currentTarget.style.background = "rgba(239,68,68,0.15)"}
                             >✕ Close Viewer</button>
                           </div>
                         </div>
@@ -1270,4 +1423,5 @@
     root.render(<RTMNUChecker />);
   </script>
 </body>
+
 </html>
