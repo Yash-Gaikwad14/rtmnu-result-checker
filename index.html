@@ -720,48 +720,20 @@
       const fetchMarksheetPdf = async (rollNo) => {
         setError("");
         setExpandedRow(null);
-        setMarksheetLoading(true);
 
         const qs = new URLSearchParams({
           rollno: rollNo, session, courseCode: course,
           faculty, degree, department,
         }).toString();
-        const url = `${BASE}/GetMarkSheet_report?${qs}`;
+        const directUrl = `${BASE}/GetMarkSheet_report?${qs}`;
 
-        try {
-          // Fetch the marksheet through our CORS proxy so we get the actual HTML content.
-          // This avoids the mobile browser download prompt entirely.
-          const res = await proxyFetch(url);
-          const contentType = (res.headers.get('content-type') || '').toLowerCase();
-
-          if (contentType.includes('application/pdf')) {
-            // Server returned a PDF binary — create a blob URL
-            const blob = await res.blob();
-            const blobUrl = URL.createObjectURL(blob);
-            setResults(prev => prev.map(r =>
-              r.rollNo === rollNo ? { ...r, pdfUrl: blobUrl, pdfHtml: null, remarks: "Viewing" } : r
-            ));
-          } else {
-            // Server returned HTML — we'll render it via srcdoc (works on all mobile browsers)
-            let html = await res.text();
-            // Inject a base tag so relative CSS/images load from the RTMNU server
-            if (!html.includes('<base')) {
-              html = html.replace('<head>', `<head><base href="${BASE}/">`);
-            }
-            // Add mobile-friendly viewport if missing
-            if (!html.includes('viewport')) {
-              html = html.replace('<head>', '<head><meta name="viewport" content="width=device-width, initial-scale=1">');
-            }
-            setResults(prev => prev.map(r =>
-              r.rollNo === rollNo ? { ...r, pdfHtml: html, pdfUrl: url, remarks: "Viewing" } : r
-            ));
-          }
+        // Small delay to let React unmount the previous iframe completely
+        setTimeout(() => {
+          setResults(prev => prev.map(r =>
+            r.rollNo === rollNo ? { ...r, pdfUrl: directUrl, pdfHtml: null, remarks: "Viewing" } : r
+          ));
           setExpandedRow(rollNo);
-        } catch (e) {
-          setError("Failed to load marksheet for " + rollNo + ". Please try again.");
-        } finally {
-          setMarksheetLoading(false);
-        }
+        }, 50);
       };
 
       const handleStop = () => { abortRef.current = true; };
@@ -1391,26 +1363,10 @@
                   </div>
                 </div>
 
-                {/* Expanded PDF Viewer Modal */}
-                {/* Loading overlay for marksheet fetch */}
-                {marksheetLoading && (
-                  <div style={{
-                    position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
-                    background: "rgba(6, 8, 15, 0.8)",
-                    backdropFilter: "blur(8px)",
-                    zIndex: 1000,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    flexDirection: "column", gap: "1rem",
-                  }}>
-                    <Spinner size={40} />
-                    <span style={{ color: "#a5b4fc", fontSize: "0.9rem", fontWeight: 600 }}>Loading Marksheet...</span>
-                  </div>
-                )}
-
                 {/* Expanded Marksheet Viewer Modal */}
                 {expandedRow && (() => {
                   const r = results.find(x => x.rollNo === expandedRow);
-                  if (!r?.pdfUrl && !r?.pdfHtml) return null;
+                  if (!r?.pdfUrl) return null;
                   return (
                     <div style={{
                       position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
@@ -1441,27 +1397,27 @@
                           <span style={{ color: "#a5b4fc", fontWeight: "700", fontSize: isMobile ? "0.85rem" : "1rem" }}>
                             📋 {r.rollNo}
                           </span>
-                          <button onClick={() => setExpandedRow(null)} style={{
-                            background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)",
-                            borderRadius: "10px", color: "#fca5a5",
-                            padding: isMobile ? "0.45rem 0.7rem" : "0.5rem 1rem",
-                            cursor: "pointer", fontSize: isMobile ? "0.7rem" : "0.8rem", fontWeight: 600,
-                            transition: "all 0.2s",
-                          }}
-                            onMouseEnter={e => e.currentTarget.style.background = "rgba(239,68,68,0.25)"}
-                            onMouseLeave={e => e.currentTarget.style.background = "rgba(239,68,68,0.15)"}
-                          >✕ Close</button>
+                          <div style={{ display: "flex", gap: "0.5rem" }}>
+                            <a href={r.pdfUrl} target="_blank" rel="noopener noreferrer" style={{
+                              background: "rgba(56,189,248,0.15)", border: "1px solid rgba(56,189,248,0.3)",
+                              borderRadius: "10px", color: "#7dd3fc",
+                              padding: isMobile ? "0.45rem 0.7rem" : "0.5rem 1rem",
+                              fontSize: isMobile ? "0.7rem" : "0.8rem", textDecoration: "none", fontWeight: 600,
+                              transition: "all 0.2s",
+                              display: "inline-flex", alignItems: "center", gap: "0.3rem",
+                            }}>🔗 Open in Browser</a>
+                            <button onClick={() => setExpandedRow(null)} style={{
+                              background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)",
+                              borderRadius: "10px", color: "#fca5a5",
+                              padding: isMobile ? "0.45rem 0.7rem" : "0.5rem 1rem",
+                              cursor: "pointer", fontSize: isMobile ? "0.7rem" : "0.8rem", fontWeight: 600,
+                              transition: "all 0.2s",
+                            }}>✕ Close</button>
+                          </div>
                         </div>
-                        {r.pdfHtml ? (
-                          <iframe key={r.rollNo + '_html'} srcDoc={r.pdfHtml}
-                            sandbox="allow-same-origin allow-scripts"
-                            style={{ width: "100%", flexGrow: 1, border: "none", background: "#fff" }}
-                            title={`Marksheet ${r.rollNo}`} />
-                        ) : (
-                          <iframe key={r.rollNo + '_pdf'} src={r.pdfUrl}
-                            style={{ width: "100%", flexGrow: 1, border: "none", background: "#fff" }}
-                            title={`Marksheet ${r.rollNo}`} />
-                        )}
+                        <iframe key={r.pdfUrl} src={r.pdfUrl}
+                          style={{ width: "100%", flexGrow: 1, border: "none", background: "#fff" }}
+                          title={`Marksheet ${r.rollNo}`} />
                       </div>
                     </div>
                   );
