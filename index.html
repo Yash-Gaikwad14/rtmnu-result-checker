@@ -300,17 +300,18 @@
     const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
     const BASE = "https://rtmnuresults.uonex.in";
-    
+
     // ── CUSTOM CLOUDFLARE PROXY ──
     // Paste your deployed Cloudflare Worker URL here (make sure it ends with "?url=")
     // Example: "https://my-proxy.yourname.workers.dev/?url="
-    const CUSTOM_PROXY = ""; 
+    const CUSTOM_PROXY = "https://deploy.gyash8020.workers.dev/?url=";
 
     const CORS_PROXIES = [
-      url => `https://cors.eu.org/${url}`,
+      url => `https://corsproxy.io/?url=${encodeURIComponent(url)}`,
       url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-      url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+      url => `https://proxy.cors.sh/${url}`,
       url => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+      url => `https://thingproxy.freeboard.io/fetch/${url}`,
     ];
 
     const proxyFetch = async (url, options = {}) => {
@@ -324,12 +325,24 @@
         return res;
       }
 
-      // 2. Otherwise, fallback to the slow public proxies using Promise.any
+      // 2. Try a direct fetch first — works if the server sends CORS headers
+      try {
+        const res = await fetch(url, {
+          ...options,
+          signal: AbortSignal.timeout(8000),
+          mode: 'cors',
+        });
+        if (res.ok) return res;
+      } catch (_) {
+        // Direct fetch failed (CORS blocked) — fall through to proxies
+      }
+
+      // 3. Otherwise, fallback to public proxies using Promise.any
       // This ensures we always get the fastest response and don't wait for slow proxies to timeout.
       const fetchPromises = CORS_PROXIES.map(proxyFn =>
         fetch(proxyFn(url), {
           ...options,
-          signal: AbortSignal.timeout(10000), // 10s max timeout per proxy
+          signal: AbortSignal.timeout(12000), // 12s max timeout per proxy
         }).then(res => {
           if (res.ok) return res;
           throw new Error('Proxy returned non-ok status');
@@ -339,7 +352,7 @@
       try {
         return await Promise.any(fetchPromises);
       } catch (e) {
-        throw new Error("All CORS proxies failed. Try again later.");
+        throw new Error("All CORS proxies failed. Please deploy the Cloudflare Worker (see cloudflare-worker.js) and set CUSTOM_PROXY above.");
       }
     };
 
@@ -355,7 +368,10 @@
 
       const res = await proxyFetch(url);
       const data = await res.json();
-      sessionStorage.setItem(cacheKey, JSON.stringify(data));
+      // Don't cache empty arrays — the API may return [] due to missing params
+      if (!Array.isArray(data) || data.length > 0) {
+        sessionStorage.setItem(cacheKey, JSON.stringify(data));
+      }
       return data;
     };
 
@@ -585,18 +601,43 @@
         setLoadingFaculties(true);
         setFaculty(""); setDegree(""); setCourse("");
         setDegrees([]); setCourses([]); setRollNumbers([]);
-        fetchJSON("/Auth/GetFacultyName", { department })
-          .then(data => setFaculties(data.map(d => ({ value: d.id, label: d.name }))))
-          .catch(() => setError("Failed to load faculties"))
+
+        // Build the URL directly — bypass fetchJSON caching entirely
+        const targetUrl = BASE + "/Auth/GetFacultyName?department=" + encodeURIComponent(department) + "&session=" + encodeURIComponent(session);
+        const proxyUrl = CUSTOM_PROXY + encodeURIComponent(targetUrl);
+
+        console.log("[FACULTY-DEBUG] Fetching:", proxyUrl);
+
+        fetch(proxyUrl, { signal: AbortSignal.timeout(15000) })
+          .then(res => {
+            console.log("[FACULTY-DEBUG] Response status:", res.status);
+            if (!res.ok) throw new Error("HTTP " + res.status);
+            return res.json();
+          })
+          .then(data => {
+            console.log("[FACULTY-DEBUG] Got data, count:", data.length);
+            if (!data || data.length === 0) {
+              setError("No faculties found for this session.");
+              return;
+            }
+            const mapped = data.map(d => ({ value: d.id, label: d.name }));
+            console.log("[FACULTY-DEBUG] Setting faculties:", mapped.map(m => m.label).join(", "));
+            setFaculties(mapped);
+            setError("");
+          })
+          .catch(err => {
+            console.error("[FACULTY-DEBUG] Error:", err);
+            setError("Faculty load error: " + err.message);
+          })
           .finally(() => setLoadingFaculties(false));
-      }, [session]);
+      }, [session, department]);
 
       useEffect(() => {
         if (!faculty || !department) { setDegrees([]); return; }
         setLoadingDegrees(true);
         setDegree(""); setCourse("");
         setCourses([]); setRollNumbers([]);
-        fetchJSON("/Auth/GetDegreesByFaculty", { faculty, department })
+        fetchJSON("/Auth/GetDegreesByFaculty", { faculty, session, department })
           .then(data => {
             const uniqueDegrees = [...new Set(data.map(d => d.degree))].filter(Boolean);
             setDegrees(uniqueDegrees.map(deg => ({ value: deg, label: deg })));
@@ -610,7 +651,7 @@
         setLoadingCourses(true);
         setCourse("");
         setRollNumbers([]);
-        fetchJSON("/Auth/GetCoursesByFacultyDegree", { faculty, coursecode: degree, department })
+        fetchJSON("/Auth/GetCoursesByFacultyDegree", { faculty, coursecode: degree, session, department })
           .then(data => setCourses(data.map(d => ({ value: d.courseCode, label: d.courseName }))))
           .catch(() => setError("Failed to load courses"))
           .finally(() => setLoadingCourses(false));
@@ -712,7 +753,7 @@
       };
 
       // Detect mobile devices reliably
-      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) 
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
         || (window.innerWidth <= 768);
 
       const [marksheetLoading, setMarksheetLoading] = useState(false);
@@ -724,16 +765,16 @@
 
         const timestamp = Date.now();
         const qs = new URLSearchParams({
-          rollno: rollNo, 
-          session, 
+          rollno: rollNo,
+          session,
           courseCode: course,
-          faculty, 
-          degree, 
+          faculty,
+          degree,
           department,
           _t: timestamp, // Aggressive cache-buster for mobile browsers
           rand: Math.random().toString(36).substring(7)
         }).toString();
-        
+
         const directUrl = `${BASE}/GetMarkSheet_report?${qs}`;
 
         // Step 2: Longer delay (150ms) to ensure the mobile browser has fully 
@@ -899,6 +940,28 @@
               backdropFilter: "blur(20px)",
               boxShadow: "0 4px 40px rgba(0,0,0,0.2)",
             }}>
+              {/* ── Proxy Warning Banner ── */}
+              {!CUSTOM_PROXY && (
+                <div style={{
+                  marginBottom: "1.5rem",
+                  padding: "0.85rem 1.1rem",
+                  background: "linear-gradient(135deg, rgba(245,158,11,0.1), rgba(245,158,11,0.04))",
+                  border: "1px solid rgba(245,158,11,0.25)",
+                  borderRadius: "14px",
+                  fontSize: "0.78rem",
+                  color: "#fcd34d",
+                  fontFamily: "'Inter', sans-serif",
+                  lineHeight: 1.6,
+                  animation: "fadeInUp 0.4s ease-out",
+                }}>
+                  <div style={{ fontWeight: 700, marginBottom: "0.3rem", display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                    <span>⚡</span> For best performance, deploy a Cloudflare Worker
+                  </div>
+                  <div style={{ color: "#fbbf24", opacity: 0.85 }}>
+                    Public CORS proxies are unreliable and often fail. Deploy <code style={{ background: "rgba(0,0,0,0.3)", padding: "0 4px", borderRadius: "4px" }}>cloudflare-worker.js</code> to <a href="https://workers.cloudflare.com" target="_blank" style={{ color: "#38bdf8" }}>workers.cloudflare.com</a> (free), then paste your Worker URL into <code style={{ background: "rgba(0,0,0,0.3)", padding: "0 4px", borderRadius: "4px" }}>CUSTOM_PROXY</code> at the top of this file.
+                  </div>
+                </div>
+              )}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.3rem" }}>
                 <div style={{ gridColumn: "1 / -1" }}>
                   <SelectField id="result-type" label="Result Type *" icon="🏛️"
@@ -1425,8 +1488,8 @@
                             }}>✕ Close</button>
                           </div>
                         </div>
-                        <iframe 
-                          key={`${r.rollNo}_${r.lastViewed}`} 
+                        <iframe
+                          key={`${r.rollNo}_${r.lastViewed}`}
                           src={r.pdfUrl}
                           style={{ width: "100%", flexGrow: 1, border: "none", background: "#fff" }}
                           title={`Marksheet ${r.rollNo}`}
