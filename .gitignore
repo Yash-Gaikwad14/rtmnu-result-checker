@@ -1,0 +1,17 @@
+# OS cache files
+.DS_Store
+Thumbs.db
+
+# Editor and IDE folders
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# Local logs and temp files
+*.log
+tmp/
+.gemini/
